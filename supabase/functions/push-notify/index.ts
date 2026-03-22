@@ -1,11 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import webpush from "npm:web-push@3";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:contact@bouture.com";
+
+webpush.setVapidDetails(
+  Deno.env.get("VAPID_SUBJECT") ?? "mailto:contact@bouture.com",
+  Deno.env.get("VAPID_PUBLIC_KEY")!,
+  Deno.env.get("VAPID_PRIVATE_KEY")!,
+);
 
 interface WebhookPayload {
   type: "INSERT";
@@ -27,104 +31,6 @@ interface PushSubscriptionRow {
   keys_auth: string;
 }
 
-async function importVapidKeys() {
-  const rawPublicBytes = base64UrlDecode(VAPID_PUBLIC_KEY);
-  const rawPrivateBytes = base64UrlDecode(VAPID_PRIVATE_KEY);
-
-  const jwk: JsonWebKey = {
-    kty: "EC",
-    crv: "P-256",
-    x: base64UrlEncode(rawPublicBytes.slice(1, 33)),
-    y: base64UrlEncode(rawPublicBytes.slice(33, 65)),
-    d: base64UrlEncode(rawPrivateBytes),
-  };
-
-  return await crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"],
-  );
-}
-
-function base64UrlDecode(str: string): Uint8Array {
-  const padding = "=".repeat((4 - (str.length % 4)) % 4);
-  const base64 = (str + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-async function createVapidAuthHeader(
-  audience: string,
-  privateKey: CryptoKey,
-): Promise<string> {
-  const header = { typ: "JWT", alg: "ES256" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    aud: audience,
-    exp: now + 12 * 60 * 60,
-    sub: VAPID_SUBJECT,
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = base64UrlEncode(encoder.encode(JSON.stringify(header)));
-  const payloadB64 = base64UrlEncode(encoder.encode(JSON.stringify(payload)));
-  const unsigned = `${headerB64}.${payloadB64}`;
-
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    privateKey,
-    encoder.encode(unsigned),
-  );
-
-  const sigBytes = new Uint8Array(signature);
-  const r = sigBytes.slice(0, 32);
-  const s = sigBytes.slice(32, 64);
-  const sigB64 = base64UrlEncode(new Uint8Array([...r, ...s]));
-
-  return `vapid t=${unsigned}.${sigB64}, k=${VAPID_PUBLIC_KEY}`;
-}
-
-async function sendPushNotification(
-  subscription: PushSubscriptionRow,
-  payload: string,
-  privateKey: CryptoKey,
-): Promise<boolean> {
-  const url = new URL(subscription.endpoint);
-  const audience = `${url.protocol}//${url.host}`;
-
-  const authorization = await createVapidAuthHeader(audience, privateKey);
-
-  const response = await fetch(subscription.endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/octet-stream",
-      TTL: "86400",
-    },
-    body: payload,
-  });
-
-  if (response.status === 404 || response.status === 410) {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    await supabase
-      .from("push_subscriptions")
-      .delete()
-      .eq("endpoint", subscription.endpoint);
-  }
-
-  return response.ok || response.status === 201;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -141,13 +47,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = (await req.json()) as WebhookPayload;
+    const { record } = (await req.json()) as WebhookPayload;
 
-    const record = payload.record;
     if (!record?.conversation_id || !record?.sender_id) {
-      return new Response(
-        JSON.stringify({ error: "Invalid webhook payload: missing conversation_id or sender_id" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
+      return Response.json(
+        { error: "Invalid webhook payload: missing conversation_id or sender_id" },
+        { status: 400 },
       );
     }
 
@@ -167,24 +72,24 @@ Deno.serve(async (req) => {
     ]);
 
     if (conversationResult.error || !conversationResult.data) {
-      return new Response(
-        JSON.stringify({ error: "Conversation not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
-      );
+      return Response.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    const conversation = conversationResult.data;
-    const recipientId = conversation.participant_a === record.sender_id
-      ? conversation.participant_b
-      : conversation.participant_a;
+    const { participant_a, participant_b } = conversationResult.data;
+    const recipientId =
+      participant_a === record.sender_id ? participant_b : participant_a;
 
     const senderName = senderResult.data?.username ?? "Quelqu'un";
 
-    const title = `Nouveau message de ${senderName}`;
-    const body = record.type === "image"
-      ? "\u{1F4F7} Photo"
-      : (record.content?.slice(0, 100) ?? "");
-    const notifUrl = `/messages/${record.conversation_id}`;
+    const notificationPayload = JSON.stringify({
+      title: `Nouveau message de ${senderName}`,
+      body:
+        record.type === "image"
+          ? "\u{1F4F7} Photo"
+          : (record.content?.slice(0, 100) ?? ""),
+      icon: "/icons/icon-192x192.png",
+      url: `/messages/${record.conversation_id}`,
+    });
 
     const { data: subscriptions, error: subError } = await supabase
       .from("push_subscriptions")
@@ -192,45 +97,48 @@ Deno.serve(async (req) => {
       .eq("user_id", recipientId);
 
     if (subError) {
-      return new Response(
-        JSON.stringify({ error: subError.message }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+      return Response.json({ error: subError.message }, { status: 500 });
     }
 
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No push subscriptions for recipient", recipientId }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return Response.json({
+        message: "No push subscriptions for recipient",
+        recipientId,
+      });
     }
 
-    const privateKey = await importVapidKeys();
-    const notificationPayload = JSON.stringify({
-      title,
-      body,
-      icon: "/icons/icon-192x192.png",
-      url: notifUrl,
-    });
-
     const results = await Promise.allSettled(
-      subscriptions.map((sub: PushSubscriptionRow) =>
-        sendPushNotification(sub, notificationPayload, privateKey),
-      ),
+      subscriptions.map(async (sub: PushSubscriptionRow) => {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.keys_p256dh, auth: sub.keys_auth },
+        };
+
+        try {
+          await webpush.sendNotification(pushSubscription, notificationPayload);
+          return true;
+        } catch (err: unknown) {
+          const status = (err as { statusCode?: number }).statusCode;
+          if (status === 404 || status === 410) {
+            await supabase
+              .from("push_subscriptions")
+              .delete()
+              .eq("endpoint", sub.endpoint);
+          }
+          return false;
+        }
+      }),
     );
 
     const sent = results.filter(
       (r) => r.status === "fulfilled" && r.value,
     ).length;
 
-    return new Response(
-      JSON.stringify({ sent, total: subscriptions.length }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
+    return Response.json({ sent, total: subscriptions.length });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: (err as Error).message }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+    return Response.json(
+      { error: (err as Error).message },
+      { status: 500 },
     );
   }
 });

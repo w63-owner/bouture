@@ -78,7 +78,7 @@ export function MapView() {
 
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
-      trackUserLocation: true,
+      trackUserLocation: false,
     });
     map.addControl(geolocate, "bottom-right");
 
