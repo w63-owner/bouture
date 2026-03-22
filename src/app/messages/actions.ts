@@ -1,0 +1,100 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+const SIZE_LABELS: Record<string, string> = {
+  graine: "Graine",
+  tubercule: "Tubercule",
+  xs: "XS",
+  s: "S",
+  m: "M",
+  l: "L",
+  xl: "XL",
+  xxl: "XXL",
+};
+
+export async function startConversation(
+  donorId: string,
+  listingId: string,
+  speciesName: string,
+  size: string,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié");
+  if (user.id === donorId) throw new Error("Vous ne pouvez pas vous contacter vous-même");
+
+  const { data: conversationId, error } = await supabase.rpc(
+    "get_or_create_conversation",
+    { other_user_id: donorId, for_listing_id: listingId },
+  );
+
+  if (error || !conversationId) {
+    throw new Error(error?.message ?? "Impossible de créer la conversation");
+  }
+
+  const { count } = await supabase
+    .from("messages")
+    .select("*", { count: "exact", head: true })
+    .eq("conversation_id", conversationId);
+
+  if (count === 0) {
+    const sizeLabel = SIZE_LABELS[size] ?? size;
+    await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      content: `Bonjour ! Je suis intéressé(e) par votre bouture de ${speciesName} (${sizeLabel}).`,
+      type: "text",
+    });
+  }
+
+  redirect(`/messages/${conversationId}`);
+}
+
+export async function sendMessage(conversationId: string, content: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié");
+
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error("Le message ne peut pas être vide");
+
+  const { error } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    content: trimmed,
+    type: "text",
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function sendImageMessage(
+  conversationId: string,
+  imagePath: string,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié");
+
+  if (!imagePath) throw new Error("Chemin de l'image manquant");
+
+  const { error } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    type: "image",
+    image_url: imagePath,
+  });
+
+  if (error) throw new Error(error.message);
+}
