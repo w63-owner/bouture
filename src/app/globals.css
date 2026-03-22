@@ -119,15 +119,15 @@ body {
 
 @keyframes pin-bounce-in {
   0% {
-    transform: scale(0);
+    scale: 0;
     opacity: 0;
   }
   60% {
-    transform: scale(1.15);
+    scale: 1.15;
     opacity: 1;
   }
   100% {
-    transform: scale(1);
+    scale: 1;
     opacity: 1;
   }
 }
@@ -154,15 +154,15 @@ body {
 
 @keyframes cluster-pop-in {
   0% {
-    transform: scale(0);
+    scale: 0;
     opacity: 0;
   }
   70% {
-    transform: scale(1.1);
+    scale: 1.1;
     opacity: 1;
   }
   100% {
-    transform: scale(1);
+    scale: 1;
     opacity: 1;
   }
 }

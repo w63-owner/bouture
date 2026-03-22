@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -44,6 +45,7 @@ interface ListingDetailProps {
 }
 
 export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
+  const router = useRouter();
   const isOwner = currentUserId === listing.donor_id;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -71,19 +73,20 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
   const handleContact = useCallback(() => {
     startTransition(async () => {
       try {
-        await startConversation(
+        const conversationId = await startConversation(
           listing.donor_id,
           listing.id,
           listing.species_name,
           listing.size,
         );
+        router.push(`/messages/${conversationId}`);
       } catch (e) {
         toast.error(
           e instanceof Error ? e.message : "Erreur lors de la création de la conversation",
         );
       }
     });
-  }, [listing.donor_id, listing.id, listing.species_name, listing.size]);
+  }, [listing.donor_id, listing.id, listing.species_name, listing.size, router]);
 
   const handleDelete = useCallback(() => {
     startTransition(async () => {

@@ -18,18 +18,25 @@ const LISTING_DEFAULTS: Required<CompressOptions> = {
   fileType: "image/webp",
 };
 
+async function ensureFile(result: File | Blob, originalName: string): Promise<File> {
+  if (result instanceof File) return result;
+  return new File([result], originalName, { type: result.type });
+}
+
 export async function compressAvatar(file: File): Promise<File> {
-  return imageCompression(file, {
+  const result = await imageCompression(file, {
     ...AVATAR_DEFAULTS,
     useWebWorker: true,
   });
+  return ensureFile(result, file.name);
 }
 
 export async function compressListingPhoto(file: File): Promise<File> {
-  return imageCompression(file, {
+  const result = await imageCompression(file, {
     ...LISTING_DEFAULTS,
     useWebWorker: true,
   });
+  return ensureFile(result, file.name);
 }
 
 export const compressChatPhoto = compressListingPhoto;

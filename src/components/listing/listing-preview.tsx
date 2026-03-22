@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Leaf, Clock } from "lucide-react";
 import { PhotoCarousel } from "@/components/ui/carousel";
@@ -42,14 +42,13 @@ export function ListingPreview({
     });
   }, []);
 
-  const previewUrls = useMemo(
-    () => data.photos.map((f) => URL.createObjectURL(f)),
-    [data.photos],
-  );
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    return () => previewUrls.forEach((u) => URL.revokeObjectURL(u));
-  }, [previewUrls]);
+    const urls = data.photos.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, [data.photos]);
 
   return (
     <motion.div

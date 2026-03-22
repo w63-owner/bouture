@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 
 const SIZE_LABELS: Record<string, string> = {
   graine: "Graine",
@@ -52,7 +51,7 @@ export async function startConversation(
     });
   }
 
-  redirect(`/messages/${conversationId}`);
+  return conversationId as string;
 }
 
 export async function sendMessage(conversationId: string, content: string) {

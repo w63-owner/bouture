@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronRight,
   Loader2,
+  LogOut,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -117,6 +118,23 @@ export default function ProfilPage() {
           ))}
         </ul>
       </nav>
+
+      {/* Déconnexion */}
+      <div className="mt-4 px-5">
+        <button
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.replace("/auth/login");
+          }}
+          className="flex w-full items-center gap-3.5 rounded-card bg-white px-4 py-3.5 shadow-card transition-colors hover:bg-neutral-100"
+        >
+          <LogOut className="h-5 w-5 text-red-500" />
+          <span className="flex-1 text-left text-sm font-medium text-red-500">
+            Se déconnecter
+          </span>
+        </button>
+      </div>
 
       {/* Edit sheet */}
       <EditProfileSheet

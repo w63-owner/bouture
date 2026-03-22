@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   motion,
   AnimatePresence,
@@ -31,6 +32,7 @@ const springTransition = {
 };
 
 export function ListingBottomSheet() {
+  const router = useRouter();
   const selectedListing = useMapStore((s) => s.selectedListing);
   const clearSelection = useMapStore((s) => s.clearSelection);
   const [isPending, startTransition] = useTransition();
@@ -51,19 +53,20 @@ export function ListingBottomSheet() {
     if (!selectedListing) return;
     startTransition(async () => {
       try {
-        await startConversation(
+        const conversationId = await startConversation(
           selectedListing.donor_id,
           selectedListing.id,
           selectedListing.species_name,
           selectedListing.size,
         );
+        router.push(`/messages/${conversationId}`);
       } catch (e) {
         toast.error(
           e instanceof Error ? e.message : "Erreur lors de la création de la conversation",
         );
       }
     });
-  }, [selectedListing]);
+  }, [selectedListing, router]);
 
   return (
     <AnimatePresence>
