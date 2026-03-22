@@ -1,64 +1,117 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Plus,
-  Sprout,
-  ArrowDownAZ,
-  CalendarDays,
-  Loader2,
-} from "lucide-react";
+import { ArrowLeft, Search, Loader2, Sprout, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  getUserPlants,
-  type PlantLibraryItem,
-} from "@/lib/supabase/queries/plant-library";
-import { PlantCard } from "@/components/profile/plant-card";
-import Link from "next/link";
-
-type SortMode = "date" | "name";
+  getAllSpecies,
+  type SpeciesRow,
+} from "@/lib/supabase/queries/species";
+import { getUserOwnedSpeciesIds } from "@/lib/supabase/queries/plant-library";
+import { SpeciesPokedexCard } from "@/components/profile/species-pokedex-card";
 
 export default function BibliothequePage() {
   const router = useRouter();
-  const [plants, setPlants] = useState<PlantLibraryItem[]>([]);
+  const [species, setSpecies] = useState<SpeciesRow[]>([]);
+  const [ownedIds, setOwnedIds] = useState<Set<number>>(new Set());
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState<SortMode>("date");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const pageRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const loadPlants = useCallback(async () => {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    try {
-      const data = await getUserPlants(user.id);
-      setPlants(data);
-    } catch {
-      // load failed
-    } finally {
-      setLoading(false);
-    }
+  // Reset when search changes
+  useEffect(() => {
+    pageRef.current = 0;
+    setSpecies([]);
+    setHasMore(true);
+    setLoading(true);
+  }, [debouncedSearch]);
+
+  const loadSpecies = useCallback(
+    async (page: number, append: boolean) => {
+      try {
+        const result = await getAllSpecies(page, debouncedSearch || undefined);
+        setSpecies((prev) =>
+          append ? [...prev, ...result.data] : result.data,
+        );
+        setHasMore(result.hasMore);
+      } catch {
+        // load failed silently
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [debouncedSearch],
+  );
+
+  // Initial load + auth
+  useEffect(() => {
+    const init = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        try {
+          const ids = await getUserOwnedSpeciesIds(user.id);
+          setOwnedIds(ids);
+        } catch {
+          // owned fetch failed
+        }
+      }
+      loadSpecies(0, false);
+    };
+    init();
+  }, [loadSpecies]);
+
+  // Infinite scroll via IntersectionObserver
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          setLoadingMore(true);
+          pageRef.current += 1;
+          loadSpecies(pageRef.current, true);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, loadSpecies]);
+
+  const handleSpeciesAdded = useCallback((speciesId: number) => {
+    setOwnedIds((prev) => new Set(prev).add(speciesId));
   }, []);
 
-  useEffect(() => {
-    loadPlants();
-  }, [loadPlants]);
+  const sortedSpecies = useMemo(
+    () =>
+      [...species].sort((a, b) => {
+        const aOwned = ownedIds.has(a.id) ? 0 : 1;
+        const bOwned = ownedIds.has(b.id) ? 0 : 1;
+        return aOwned - bOwned;
+      }),
+    [species, ownedIds],
+  );
 
-  const sorted = [...plants].sort((a, b) => {
-    if (sort === "name") return a.species_name.localeCompare(b.species_name);
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const ownedCount = sortedSpecies.filter((s) => ownedIds.has(s.id)).length;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -72,91 +125,83 @@ export default function BibliothequePage() {
           >
             <ArrowLeft className="h-5 w-5 text-neutral-900" />
           </button>
-          <h1 className="flex-1 text-lg font-display font-semibold text-neutral-900">
-            Ma bibliothèque
-          </h1>
-          <Link
-            href="/profil/bibliotheque/ajouter"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-btn transition-colors hover:bg-primary-light"
-          >
-            <Plus className="h-4 w-4" />
-          </Link>
+          <div className="flex flex-1 flex-col">
+            <h1 className="text-lg font-display font-semibold text-neutral-900">
+              Pokédex des plantes
+            </h1>
+            {!loading && (
+              <p className="text-xs text-neutral-500">
+                {ownedCount}/{sortedSpecies.length} espèces collectionnées
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher une espèce..."
+            className="w-full rounded-pill border-[1.5px] border-neutral-300 bg-neutral-100 py-2 pl-9 pr-9 text-sm text-neutral-900 placeholder:text-neutral-400 transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Sort controls */}
-      {plants.length > 0 && (
-        <div className="flex gap-2 px-5 pt-4">
-          <button
-            type="button"
-            onClick={() => setSort("date")}
-            className={`inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold transition-colors ${
-              sort === "date"
-                ? "bg-primary text-white"
-                : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-            }`}
-          >
-            <CalendarDays className="h-3.5 w-3.5" />
-            Date
-          </button>
-          <button
-            type="button"
-            onClick={() => setSort("name")}
-            className={`inline-flex items-center gap-1.5 rounded-pill px-3 py-1.5 text-xs font-semibold transition-colors ${
-              sort === "name"
-                ? "bg-primary text-white"
-                : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-            }`}
-          >
-            <ArrowDownAZ className="h-3.5 w-3.5" />
-            Nom A–Z
-          </button>
+      {/* Content */}
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      )}
-
-      {/* Grid */}
-      {plants.length === 0 ? (
+      ) : sortedSpecies.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
             <Sprout className="h-10 w-10 text-primary" />
           </div>
           <div>
             <p className="text-base font-semibold text-neutral-900">
-              Votre bibliothèque est vide
+              {debouncedSearch
+                ? "Aucune espèce trouvée"
+                : "Aucune espèce enregistrée"}
             </p>
             <p className="mt-1 text-sm text-neutral-600">
-              Ajoutez vos plantes pour les retrouver facilement et les proposer
-              en don.
+              {debouncedSearch
+                ? "Essayez un autre terme de recherche."
+                : "Les espèces apparaîtront ici une fois ajoutées à la base."}
             </p>
           </div>
-          <Link
-            href="/profil/bibliotheque/ajouter"
-            className="inline-flex items-center gap-2 rounded-btn bg-primary px-6 py-3 font-semibold text-white shadow-btn transition-all hover:bg-primary-light active:scale-[0.97]"
-          >
-            <Plus className="h-4 w-4" />
-            Ajouter une plante
-          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-5 pt-4 pb-8 sm:grid-cols-3 lg:grid-cols-4">
-          {sorted.map((plant) => (
-            <PlantCard
-              key={plant.id}
-              id={plant.id}
-              speciesName={plant.species_name}
-              photo={plant.photos[0] ?? null}
-              status={plant.status}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
+            {sortedSpecies.map((s) => (
+              <SpeciesPokedexCard
+                key={s.id}
+                species={s}
+                isOwned={ownedIds.has(s.id)}
+                userId={userId}
+                onAdded={handleSpeciesAdded}
+              />
+            ))}
+          </div>
 
-          {/* Add card */}
-          <Link
-            href="/profil/bibliotheque/ajouter"
-            className="flex aspect-square flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-neutral-300 bg-white text-neutral-600 transition-colors hover:border-primary hover:text-primary"
-          >
-            <Plus className="h-8 w-8" />
-            <span className="text-xs font-medium">Ajouter</span>
-          </Link>
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="flex justify-center py-6">
+            {loadingMore && (
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            )}
+          </div>
         </div>
       )}
     </div>

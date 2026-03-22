@@ -109,9 +109,9 @@ export default function AdressePage() {
   );
 
   const selectResult = useCallback((r: GeocodingResult) => {
-    const city = r.text || r.placeName;
-    setQuery(city);
-    setSelectedCity(city);
+    const label = r.placeName || r.text;
+    setQuery(label);
+    setSelectedCity(label);
     setSelectedLat(r.center[1]);
     setSelectedLng(r.center[0]);
     setHasChanges(true);

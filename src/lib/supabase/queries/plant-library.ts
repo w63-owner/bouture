@@ -103,3 +103,21 @@ export async function deletePlant(plantId: string): Promise<void> {
 
   if (error) throw new Error(`Failed to delete plant: ${error.message}`);
 }
+
+export async function getUserOwnedSpeciesIds(
+  userId: string,
+): Promise<Set<number>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("plant_library")
+    .select("species_id")
+    .eq("user_id", userId)
+    .not("species_id", "is", null);
+
+  if (error) throw new Error(`Failed to fetch owned species: ${error.message}`);
+
+  return new Set(
+    (data ?? []).map((row) => row.species_id).filter((id): id is number => id !== null),
+  );
+}

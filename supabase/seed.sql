@@ -1,56 +1,75 @@
 -- =============================================================================
--- Seed: species table (~50 common plants for development)
+-- Seed: species table – Top 50 plantes d'intérieur & balcon en France
 -- =============================================================================
 
-INSERT INTO species (common_name, scientific_name, family) VALUES
-  ('Monstera deliciosa', 'Monstera deliciosa', 'Araceae'),
-  ('Pothos', 'Epipremnum aureum', 'Araceae'),
-  ('Ficus elastica', 'Ficus elastica', 'Moraceae'),
-  ('Aloe vera', 'Aloe vera', 'Asphodelaceae'),
-  ('Sansevieria', 'Dracaena trifasciata', 'Asparagaceae'),
-  ('Philodendron', 'Philodendron hederaceum', 'Araceae'),
-  ('Calathea', 'Calathea orbifolia', 'Marantaceae'),
-  ('Tradescantia', 'Tradescantia zebrina', 'Commelinaceae'),
-  ('Pilea peperomioides', 'Pilea peperomioides', 'Urticaceae'),
-  ('Begonia', 'Begonia maculata', 'Begoniaceae'),
-  ('Ceropegia', 'Ceropegia woodii', 'Apocynaceae'),
-  ('Hoya', 'Hoya carnosa', 'Apocynaceae'),
-  ('Alocasia', 'Alocasia amazonica', 'Araceae'),
-  ('Syngonium', 'Syngonium podophyllum', 'Araceae'),
-  ('Chlorophytum', 'Chlorophytum comosum', 'Asparagaceae'),
-  ('Zamioculcas', 'Zamioculcas zamiifolia', 'Araceae'),
-  ('Dracaena', 'Dracaena marginata', 'Asparagaceae'),
-  ('Dieffenbachia', 'Dieffenbachia seguine', 'Araceae'),
-  ('Maranta', 'Maranta leuconeura', 'Marantaceae'),
-  ('Peperomia', 'Peperomia obtusifolia', 'Piperaceae'),
-  ('Crassula', 'Crassula ovata', 'Crassulaceae'),
-  ('Echeveria', 'Echeveria elegans', 'Crassulaceae'),
-  ('Haworthia', 'Haworthiopsis attenuata', 'Asphodelaceae'),
-  ('Kalanchoe', 'Kalanchoe blossfeldiana', 'Crassulaceae'),
-  ('Sedum', 'Sedum morganianum', 'Crassulaceae'),
-  ('Lavande', 'Lavandula angustifolia', 'Lamiaceae'),
-  ('Romarin', 'Salvia rosmarinus', 'Lamiaceae'),
-  ('Menthe', 'Mentha spicata', 'Lamiaceae'),
-  ('Basilic', 'Ocimum basilicum', 'Lamiaceae'),
-  ('Thym', 'Thymus vulgaris', 'Lamiaceae'),
-  ('Sauge', 'Salvia officinalis', 'Lamiaceae'),
-  ('Fraisier', 'Fragaria × ananassa', 'Rosaceae'),
-  ('Tomate', 'Solanum lycopersicum', 'Solanaceae'),
-  ('Piment', 'Capsicum annuum', 'Solanaceae'),
-  ('Concombre', 'Cucumis sativus', 'Cucurbitaceae'),
-  ('Rose', 'Rosa × hybrid', 'Rosaceae'),
-  ('Hortensia', 'Hydrangea macrophylla', 'Hydrangeaceae'),
-  ('Lierre', 'Hedera helix', 'Araliaceae'),
-  ('Fougère de Boston', 'Nephrolepis exaltata', 'Nephrolepidaceae'),
-  ('Anthurium', 'Anthurium andraeanum', 'Araceae'),
-  ('Spathiphyllum', 'Spathiphyllum wallisii', 'Araceae'),
-  ('Ficus lyrata', 'Ficus lyrata', 'Moraceae'),
-  ('Strelitzia', 'Strelitzia nicolai', 'Strelitziaceae'),
-  ('Agave', 'Agave americana', 'Asparagaceae'),
-  ('Yucca', 'Yucca elephantipes', 'Asparagaceae'),
-  ('Croton', 'Codiaeum variegatum', 'Euphorbiaceae'),
-  ('Schefflera', 'Schefflera arboricola', 'Araliaceae'),
-  ('Pachira', 'Pachira aquatica', 'Malvaceae'),
-  ('Citronnier', 'Citrus limon', 'Rutaceae'),
-  ('Olivier', 'Olea europaea', 'Oleaceae')
+INSERT INTO species (common_name, scientific_name, family, visual_category) VALUES
+  -- Aracées (aracee) — 6
+  ('Monstera deliciosa',   'Monstera deliciosa',          'Araceae',           'aracee'),
+  ('Philodendron',         'Philodendron hederaceum',     'Araceae',           'aracee'),
+  ('Alocasia',             'Alocasia amazonica',          'Araceae',           'aracee'),
+  ('Syngonium',            'Syngonium podophyllum',       'Araceae',           'aracee'),
+  ('Anthurium',            'Anthurium andraeanum',        'Araceae',           'aracee'),
+  ('Spathiphyllum',        'Spathiphyllum wallisii',      'Araceae',           'aracee'),
+
+  -- Tombantes (tombante) — 6
+  ('Pothos',               'Epipremnum aureum',           'Araceae',           'tombante'),
+  ('Tradescantia',         'Tradescantia zebrina',        'Commelinaceae',     'tombante'),
+  ('Chaîne des cœurs',     'Ceropegia woodii',            'Apocynaceae',       'tombante'),
+  ('Hoya',                 'Hoya carnosa',                'Apocynaceae',       'tombante'),
+  ('Chlorophytum',         'Chlorophytum comosum',        'Asparagaceae',      'tombante'),
+  ('Lierre',               'Hedera helix',                'Araliaceae',        'tombante'),
+
+  -- Succulentes (succulente) — 6
+  ('Aloe vera',            'Aloe vera',                   'Asphodelaceae',     'succulente'),
+  ('Echeveria',            'Echeveria elegans',           'Crassulaceae',      'succulente'),
+  ('Haworthia',            'Haworthiopsis attenuata',     'Asphodelaceae',     'succulente'),
+  ('Crassula',             'Crassula ovata',              'Crassulaceae',      'succulente'),
+  ('Kalanchoe',            'Kalanchoe blossfeldiana',     'Crassulaceae',      'succulente'),
+  ('Sansevieria',          'Dracaena trifasciata',        'Asparagaceae',      'succulente'),
+
+  -- Cactus (cactus) — 4
+  ('Cactus de Noël',       'Schlumbergera truncata',      'Cactaceae',         'cactus'),
+  ('Cactus San Pedro',     'Echinopsis pachanoi',         'Cactaceae',         'cactus'),
+  ('Opuntia',              'Opuntia microdasys',          'Cactaceae',         'cactus'),
+  ('Cactus oursin',        'Echinopsis eyriesii',         'Cactaceae',         'cactus'),
+
+  -- Palmiers (palmier) — 5
+  ('Kentia',               'Howea forsteriana',           'Arecaceae',         'palmier'),
+  ('Areca',                'Dypsis lutescens',            'Arecaceae',         'palmier'),
+  ('Palmier nain',         'Chamaedorea elegans',         'Arecaceae',         'palmier'),
+  ('Strelitzia',           'Strelitzia nicolai',          'Strelitziaceae',    'palmier'),
+  ('Yucca',                'Yucca elephantipes',          'Asparagaceae',      'palmier'),
+
+  -- Fougères (fougere) — 3
+  ('Fougère de Boston',    'Nephrolepis exaltata',        'Nephrolepidaceae',  'fougere'),
+  ('Capillaire',           'Adiantum raddianum',          'Pteridaceae',       'fougere'),
+  ('Fougère nid d''oiseau','Asplenium nidus',             'Aspleniaceae',      'fougere'),
+
+  -- Arbres d'intérieur (arbre) — 6
+  ('Ficus elastica',       'Ficus elastica',              'Moraceae',          'arbre'),
+  ('Ficus lyrata',         'Ficus lyrata',                'Moraceae',          'arbre'),
+  ('Schefflera',           'Schefflera arboricola',       'Araliaceae',        'arbre'),
+  ('Pachira',              'Pachira aquatica',            'Malvaceae',         'arbre'),
+  ('Dracaena',             'Dracaena marginata',          'Asparagaceae',      'arbre'),
+  ('Olivier',              'Olea europaea',               'Oleaceae',          'arbre'),
+
+  -- Fleurs (fleur) — 4
+  ('Rose',                 'Rosa × hybrid',               'Rosaceae',          'fleur'),
+  ('Hortensia',            'Hydrangea macrophylla',       'Hydrangeaceae',     'fleur'),
+  ('Bégonia',              'Begonia maculata',            'Begoniaceae',       'fleur'),
+  ('Lavande',              'Lavandula angustifolia',      'Lamiaceae',         'fleur'),
+
+  -- Herbes aromatiques (herbe_aromatique) — 6
+  ('Basilic',              'Ocimum basilicum',            'Lamiaceae',         'herbe_aromatique'),
+  ('Menthe',               'Mentha spicata',              'Lamiaceae',         'herbe_aromatique'),
+  ('Romarin',              'Salvia rosmarinus',           'Lamiaceae',         'herbe_aromatique'),
+  ('Thym',                 'Thymus vulgaris',             'Lamiaceae',         'herbe_aromatique'),
+  ('Sauge',                'Salvia officinalis',          'Lamiaceae',         'herbe_aromatique'),
+  ('Ciboulette',           'Allium schoenoprasum',        'Amaryllidaceae',    'herbe_aromatique'),
+
+  -- Autres (autre) — 4
+  ('Pilea peperomioides',  'Pilea peperomioides',         'Urticaceae',        'autre'),
+  ('Calathea',             'Calathea orbifolia',          'Marantaceae',       'autre'),
+  ('Maranta',              'Maranta leuconeura',          'Marantaceae',       'autre'),
+  ('Peperomia',            'Peperomia obtusifolia',       'Piperaceae',        'autre')
 ON CONFLICT DO NOTHING;

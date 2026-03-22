@@ -1179,50 +1179,57 @@ VAPID_PRIVATE_KEY=<private key>
 
 ---
 
-### Step 30: Plant library (gallery, add, detail, "Proposer en don")
+### Step 30: Plant Pokédex (species encyclopedia, collection states, add-from-card)
 
-> PRD ref: Section 4.5.3 (Bibliotheque de plantes), Section 4.3.6 (From Plant Library Shortcut)
+> PRD ref: Section 4.5.3 (Pokédex des Plantes), Section 4.3.6 (From Plant Library Shortcut)
+
+**Concept:** The library page is now a "Pokédex" that displays ALL species from the `species` table. Each card shows whether the user owns that species (Active = full color + badge) or not (Inactive = grayscale + 40% opacity). Tapping an inactive card opens a dialog to add it to the user's collection.
 
 **Files to create/modify:**
 
-- [x] `src/app/profil/bibliotheque/page.tsx` — Plant library gallery:
-  - Responsive grid: 2 columns (mobile), 3 (tablet), 4 (desktop)
-  - Each card: square cover photo, species name below, status badge overlay ("En don" green, "Dans ma collection" blue, "Donne" gray)
-  - "+" add plant card at the end (dashed border, plus icon)
-  - Sorting: by date added (default) or species name (A–Z)
-  - Empty state illustration
-- [x] `src/components/profile/plant-card.tsx` — Plant gallery card component
-- [x] `src/app/profil/bibliotheque/ajouter/page.tsx` — Add plant page (full page form instead of bottom sheet):
-  - Species autocomplete (reuse `<SpeciesAutocomplete />` from Step 17)
-  - Photo upload (1–5, reuse `<PhotoUpload />` from Step 19)
-  - Notes textarea (max 300 chars)
-  - "Ajouter" button → inserts into `plant_library` table
-- [x] `src/app/profil/bibliotheque/[plantId]/page.tsx` — Plant detail page:
-  - Full photo carousel
-  - Species name, notes, date added, status badge
-  - Actions:
-    - "Proposer en don" → navigate to `/donner?plantId=[plantId]`, pre-fill species + photos
-    - "Modifier" → edit sheet (placeholder)
-    - "Supprimer" → delete with confirmation
-- [x] `src/lib/supabase/queries/plant-library.ts` — CRUD functions:
-  - `getUserPlants(userId)` — list with status
-  - `getPlantById(plantId)` — detail
-  - `addPlant(userId, data)` — insert
-  - `updatePlant(plantId, data)` — update
-  - `deletePlant(plantId)` — delete
-- [x] `src/app/donner/page.tsx` — Update to support `plantId` query param:
-  - If present: fetch plant data, pre-fill species + display plant photos
-  - Existing plant photos used directly without re-upload
-  - Change plant status to `for_donation` on listing publish
+- [ ] `supabase/migrations/XXXXXXXX_add_illustration_url.sql` — Add `illustration_url TEXT` column to `species` table
+- [ ] `src/lib/types/database.types.ts` — Regenerate or manually add `illustration_url` to `species` Row/Insert/Update types
+- [ ] `src/components/ui/plant-placeholder.tsx` — Default SVG placeholder:
+  - Minimalist "Line Art" style (thin strokes, flat accent colors)
+  - Used when `species.illustration_url` is null
+  - Consistent DA across the entire Pokédex
+- [ ] `src/lib/supabase/queries/species.ts` — Add `getAllSpecies(page, limit)`:
+  - Fetches all species ordered by `common_name` ASC
+  - Supports pagination (offset-based, 30 per page)
+  - Returns `{ id, common_name, scientific_name, family, illustration_url }`
+- [ ] `src/lib/supabase/queries/plant-library.ts` — Add `getUserOwnedSpeciesIds(userId)`:
+  - Returns a `Set<number>` of `species_id` values from the user's `plant_library`
+  - Used to compute `isOwned` for each species card
+- [ ] `src/components/profile/species-pokedex-card.tsx` — SpeciesPokédexCard component:
+  - Props: `species: Species`, `isOwned: boolean`
+  - Active state: full opacity, vivid colors, green "Dans ma collection" badge
+  - Inactive state: `grayscale opacity-40` Tailwind classes
+  - Inactive card click → opens "Add to Collection" Dialog (species pre-filled, photo upload + notes)
+  - Active card click → navigates to plant detail page
+- [ ] `src/app/profil/bibliotheque/page.tsx` — Rewrite as Pokédex page:
+  - Fetch all species with pagination (infinite scroll, 30 per batch)
+  - Fetch user's `plant_library` to compute `isOwned` per species
+  - Grid: 3 cols mobile, 4 tablet, 5 desktop
+  - Search bar at top (filters by `common_name`)
+  - Render `<SpeciesPokédexCard>` for each species
+- [x] `src/components/profile/plant-card.tsx` — Keep for existing plant detail navigation (no changes)
+- [x] `src/app/profil/bibliotheque/ajouter/page.tsx` — Keep existing add page (no changes)
+- [x] `src/app/profil/bibliotheque/[plantId]/page.tsx` — Keep existing detail page (no changes)
+- [x] `src/lib/supabase/queries/plant-library.ts` — Existing CRUD functions unchanged:
+  - `getUserPlants(userId)`, `getPlantById(plantId)`, `addPlant(userId, data)`, `updatePlant(plantId, data)`, `deletePlant(plantId)`
 
 **Checklist:**
 
-- [x] Gallery displays all user's plants in a responsive grid
-- [x] Status badges reflect correct state (synced with listings)
-- [x] Adding a plant with species + photos works
-- [x] Plant detail shows full info with actions
-- [x] "Proposer en don" pre-fills the Add Cutting form correctly
-- [x] Deleting a plant removes it from the library
+- [ ] Pokédex grid displays ALL species from the `species` table
+- [ ] Active cards (user owns species) show full color + "Dans ma collection" badge
+- [ ] Inactive cards (user does not own) show grayscale + 40% opacity
+- [ ] Tapping inactive card opens "Add to Collection" dialog with species pre-filled
+- [ ] Adding from dialog inserts into `plant_library` and transitions card to active
+- [ ] Infinite scroll loads species in batches of 30
+- [ ] Search bar filters species by common_name
+- [ ] Default line-art SVG placeholder renders when `illustration_url` is null
+- [x] Plant detail page still works for existing plants
+- [x] "Proposer en don" flow unchanged
 
 ---
 

@@ -51,3 +51,57 @@ export async function createListing(
 
   return { id: listingId, photos: allPhotos };
 }
+
+export interface UpdateListingResult {
+  id: string;
+  photos: string[];
+}
+
+export async function updateListing(
+  userId: string,
+  listingId: string,
+  data: ListingFormData,
+  existingPhotoUrls: string[],
+): Promise<UpdateListingResult> {
+  const supabase = createClient();
+
+  const { data: listing, error: fetchError } = await supabase
+    .from("listings")
+    .select("donor_id")
+    .eq("id", listingId)
+    .single();
+
+  if (fetchError || !listing) throw new Error("Annonce introuvable");
+  if (listing.donor_id !== userId) throw new Error("Non autorisé");
+
+  const uploadedUrls =
+    data.photos.length > 0
+      ? await uploadListingPhotos(userId, listingId, data.photos)
+      : [];
+
+  const allPhotos = [...existingPhotoUrls, ...uploadedUrls];
+
+  if (allPhotos.length === 0) {
+    throw new Error("Au moins 1 photo est requise");
+  }
+
+  const jittered = jitterCoordinates(data.address_lat, data.address_lng, listingId);
+
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      species_name: data.species_name,
+      species_id: data.species_id,
+      size: data.size,
+      description: data.description || null,
+      photos: allPhotos,
+      location_exact: `SRID=4326;POINT(${data.address_lng} ${data.address_lat})`,
+      location_public: `SRID=4326;POINT(${jittered.lng} ${jittered.lat})`,
+      address_city: data.address_city,
+    })
+    .eq("id", listingId);
+
+  if (error) throw new Error(`Échec de la mise à jour : ${error.message}`);
+
+  return { id: listingId, photos: allPhotos };
+}

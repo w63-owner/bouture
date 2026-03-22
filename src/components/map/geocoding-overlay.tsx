@@ -158,7 +158,7 @@ export function GeocodingOverlay({ open, onClose }: GeocodingOverlayProps) {
                   <li key={r.id}>
                     <button
                       type="button"
-                      onClick={() => selectResult(r.text, r.center)}
+                      onClick={() => selectResult(r.placeName || r.text, r.center)}
                       className="flex w-full items-start gap-3 px-5 py-3.5 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
                     >
                       <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />

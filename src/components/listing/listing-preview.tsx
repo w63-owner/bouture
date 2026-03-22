@@ -11,16 +11,22 @@ import { createClient } from "@/lib/supabase/client";
 
 interface ListingPreviewProps {
   data: ListingFormData;
+  existingPhotoUrls?: string[];
   onBack: () => void;
   onPublish: () => void;
   publishing: boolean;
+  publishLabel?: string;
+  publishingLabel?: string;
 }
 
 export function ListingPreview({
   data,
+  existingPhotoUrls = [],
   onBack,
   onPublish,
   publishing,
+  publishLabel = "Publier",
+  publishingLabel = "Publication…",
 }: ListingPreviewProps) {
   const [profile, setProfile] = useState<{
     username: string;
@@ -45,10 +51,11 @@ export function ListingPreview({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    const urls = data.photos.map((f) => URL.createObjectURL(f));
-    setPreviewUrls(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u));
-  }, [data.photos]);
+    const blobUrls = data.photos.map((f) => URL.createObjectURL(f));
+    const allUrls = [...existingPhotoUrls, ...blobUrls];
+    setPreviewUrls(allUrls);
+    return () => blobUrls.forEach((u) => URL.revokeObjectURL(u));
+  }, [data.photos, existingPhotoUrls]);
 
   return (
     <motion.div
@@ -158,7 +165,7 @@ export function ListingPreview({
           loading={publishing}
           disabled={publishing}
         >
-          {publishing ? "Publication…" : "Publier"}
+          {publishing ? publishingLabel : publishLabel}
         </Button>
       </div>
     </motion.div>

@@ -68,6 +68,8 @@ export type Database = {
           common_name: string;
           scientific_name: string | null;
           family: string | null;
+          illustration_url: string | null;
+          visual_category: string | null;
           created_at: string;
         };
         Insert: {
@@ -75,6 +77,8 @@ export type Database = {
           common_name: string;
           scientific_name?: string | null;
           family?: string | null;
+          illustration_url?: string | null;
+          visual_category?: string | null;
           created_at?: string;
         };
         Update: {
@@ -82,6 +86,8 @@ export type Database = {
           common_name?: string;
           scientific_name?: string | null;
           family?: string | null;
+          illustration_url?: string | null;
+          visual_category?: string | null;
           created_at?: string;
         };
         Relationships: [];

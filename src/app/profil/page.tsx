@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   MapPin,
   Sprout,
+  Megaphone,
   Users,
   UserCheck,
   Settings,
@@ -23,6 +24,7 @@ import { StatsRow } from "@/components/profile/stats-row";
 import { EditProfileSheet } from "@/components/profile/edit-profile-sheet";
 
 const NAV_ITEMS = [
+  { href: "/profil/annonces", label: "Mes annonces", icon: Megaphone },
   { href: "/profil/adresse", label: "Adresse", icon: MapPin },
   { href: "/profil/bibliotheque", label: "Bibliothèque de plantes", icon: Sprout },
   { href: "/profil/abonnes", label: "Abonnés", icon: Users },

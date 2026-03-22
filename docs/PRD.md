@@ -680,61 +680,56 @@ A dedicated screen for managing the user's primary location.
 
 ---
 
-#### 4.5.3 Bibliotheque de plantes — Plant Library (`/profil/bibliotheque`)
+#### 4.5.3 Pokédex des Plantes — Plant Pokédex (`/profil/bibliotheque`)
 
-A visual gallery showcasing the user's personal plant collection. Serves as both a personal record and a sharing engine.
+A collectible-style encyclopedia displaying **every species** registered in the `species` table, presented as a Pokédex. The user's personal collection determines which cards are "unlocked". This replaces the previous simple plant gallery.
 
-**Gallery View:**
-- Grid layout: 2 columns on mobile, 3 on tablet, 4 on desktop
-- Each card: cover photo (square, 1:1 aspect ratio), species name below, status badge overlay
-- Status badges:
-  - 🟢 **"En don"** (currently listed for donation) — green badge
-  - 🔵 **"Dans ma collection"** (in collection, not listed) — blue badge
-  - ⚪ **"Donne"** (was donated/given away) — gray badge
-- **"+ Ajouter une plante"** card at the end of the grid (dashed border, plus icon)
-- Sorting: by date added (default), by species name (A–Z)
-- Empty state: *"Votre bibliotheque est vide. Ajoutez votre premiere plante !"*
+**Art Direction:**
+- All species use **vectorial minimalist illustrations** in a consistent **"Colored Line Art"** style: thin outlines (stroke-based), flat accent colors, white/transparent backgrounds.
+- Every card shares the same visual language regardless of the species, ensuring a cohesive grid aesthetic.
+- Illustrations are stored per-species via `species.illustration_url`. A default SVG placeholder (same line-art style) is used when no custom illustration is available.
 
-**Add Plant Form (modal or bottom sheet):**
+**Pokédex Grid View:**
+- Grid layout: 3 columns on mobile, 4 on tablet, 5 on desktop
+- Displays **all species** from the `species` table (not just the user's plants)
+- Sorted alphabetically by `common_name` (default), with a search/filter bar at the top
+- Pagination via infinite scroll (load 30 species per batch)
 
-| Field | Type | Required |
-|-------|------|----------|
-| **Espece** | Autocomplete text (same species DB) | Yes |
-| **Photos** | Multi-upload (1–5) | Yes (min 1) |
-| **Notes** | Textarea (max 300 chars) | No |
+**Card Visual States:**
 
-**Plant Detail View (`/profil/bibliotheque/[id]`):**
-- Full-size photo carousel
-- Species name, notes, date added
-- Status badge
-- **Actions:**
-  - "Proposer en don" → navigates to `/donner` with pre-filled data from this plant entry. Changes status to `for_donation`.
-  - "Modifier" → edit species, photos, notes
-  - "Supprimer" → delete with confirmation dialog
+| State | Visual Treatment | Badge |
+|-------|-----------------|-------|
+| **Active** (user owns this species) | Full opacity, vivid DA colors, subtle green glow/border | 🟢 **"Dans ma collection"** — green badge top-left |
+| **Inactive** (user does not own) | `opacity-40` + CSS `grayscale` filter (gray shadow effect) | _No badge_ |
 
-**Donation-from-Library Flow:**
+**Card Structure (SpeciesPokédexCard):**
+- Square card (1:1 aspect ratio), rounded corners
+- Center: species illustration (line art SVG or `illustration_url`)
+- Bottom: species `common_name` (truncated), `scientific_name` in italic below (smaller, muted)
+- Top-left: "Dans ma collection" badge (active state only)
 
-```mermaid
-flowchart TD
-    A["Plant Library"] --> B["Tap plant card"]
-    B --> C["Plant Detail View"]
-    C --> D["Tap 'Proposer en don'"]
-    D --> E["Navigate to /donner"]
-    E --> F["Form pre-filled: species + photos"]
-    F --> G["User selects Size + confirms Address"]
-    G --> H["User taps Publier"]
-    H --> I["Listing created"]
-    I --> J["Plant status → 'En don'"]
-    J --> K["Link: listing.plant_library_id = plant.id"]
-```
+**Interactions:**
+- **Active card tap** → navigates to the existing Plant Detail View (`/profil/bibliotheque/[plantId]`)
+- **Inactive card tap** → opens an "Add to Collection" Dialog:
+  - Title: "Ajouter [species name] à ma collection"
+  - Species is pre-filled and locked
+  - Fields: Photos (1–5, required), Notes (optional, max 300 chars)
+  - "Ajouter" button → inserts into `plant_library` table, card transitions to Active state
+  - "Annuler" button → closes dialog
+
+**Search & Filter:**
+- Text search bar at the top filters species by `common_name` (client-side on loaded batch, server-side for full search)
+- Optional: filter toggle "Mes plantes uniquement" to show only owned species
 
 **Acceptance Criteria:**
-- [ ] Gallery loads with all user's plants in a responsive grid
-- [ ] Status badges accurately reflect current state (synced with listings table)
-- [ ] "Proposer en don" correctly pre-fills the Add Cutting form
-- [ ] When a listing linked to a plant is deactivated/deleted, plant status reverts to "Dans ma collection"
-- [ ] Plant can be added with species autocomplete and photo upload
-- [ ] Plants can be edited and deleted
+- [ ] Pokédex grid displays ALL species from the `species` table
+- [ ] Active cards (owned) show full color + "Dans ma collection" badge
+- [ ] Inactive cards (not owned) show grayscale + 40% opacity
+- [ ] Tapping an inactive card opens the "Add to Collection" dialog
+- [ ] Adding a plant from the dialog correctly inserts into `plant_library` and updates the card to active
+- [ ] Infinite scroll loads species in batches of 30
+- [ ] Search bar filters species by name
+- [ ] Default line-art SVG placeholder displays when `illustration_url` is null
 
 ---
 
@@ -1442,11 +1437,12 @@ CREATE INDEX idx_profiles_username_trgm ON profiles USING gin (username gin_trgm
 
 ```sql
 CREATE TABLE species (
-  id              SERIAL PRIMARY KEY,
-  common_name     TEXT NOT NULL,
-  scientific_name TEXT,
-  family          TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                SERIAL PRIMARY KEY,
+  common_name       TEXT NOT NULL,
+  scientific_name   TEXT,
+  family            TEXT,
+  illustration_url  TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_species_common_name_trgm ON species USING gin (common_name gin_trgm_ops);

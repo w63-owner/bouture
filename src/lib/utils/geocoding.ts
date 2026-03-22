@@ -30,12 +30,13 @@ export async function geocodeSearch(
       id: string;
       place_name: string;
       text: string;
+      address?: string;
       center: [number, number];
       context?: { text: string }[];
     }) => ({
       id: f.id,
-      placeName: f.place_name,
-      text: f.text,
+      placeName: f.place_name.replace(/, [^,]+$/, ""),
+      text: f.address ? `${f.address} ${f.text}` : f.text,
       center: f.center,
       context: (f.context ?? []).map((c) => c.text).join(", "),
     }),

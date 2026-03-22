@@ -36,6 +36,12 @@ export function AddressPicker({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (hasProfile && !value) {
+      setUseOther(false);
+    }
+  }, [hasProfile, value]);
+
+  useEffect(() => {
     if (hasProfile && !useOther && !value) {
       onChange(profileCity!, profileLat!, profileLng!);
     }
@@ -89,9 +95,9 @@ export function AddressPicker({
 
   const selectResult = useCallback(
     (r: GeocodingResult) => {
-      const city = r.text || r.placeName;
-      setQuery(city);
-      onChange(city, r.center[1], r.center[0]);
+      const label = r.placeName || r.text;
+      setQuery(label);
+      onChange(label, r.center[1], r.center[0]);
       setOpen(false);
     },
     [onChange],

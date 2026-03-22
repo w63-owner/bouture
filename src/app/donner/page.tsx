@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Leaf, X } from "lucide-react";
+import { Leaf, X, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 
 import { listingFormSchema, type ListingFormData } from "@/lib/schemas/listing";
 import { createClient } from "@/lib/supabase/client";
-import { createListing } from "@/lib/supabase/mutations/listings";
+import { createListing, updateListing } from "@/lib/supabase/mutations/listings";
+import { getListingForEdit } from "@/lib/supabase/queries/listings";
 import { updatePlant } from "@/lib/supabase/queries/plant-library";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,8 @@ export default function DonnerPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const plantId = searchParams.get("plantId");
+  const editId = searchParams.get("edit");
+  const isEditMode = Boolean(editId);
 
   const [profile, setProfile] = useState<ProfileAddress | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export default function DonnerPage() {
   const [pendingData, setPendingData] = useState<ListingFormData | null>(null);
   const [prefilled, setPrefilled] = useState(false);
   const [plantPhotoUrls, setPlantPhotoUrls] = useState<string[]>([]);
+  const [editLoading, setEditLoading] = useState(isEditMode);
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,6 +70,7 @@ export default function DonnerPage() {
     control,
     handleSubmit,
     setValue,
+    reset,
     watch,
     formState: { errors },
   } = useForm<ListingFormData>({
@@ -83,8 +88,9 @@ export default function DonnerPage() {
     },
   });
 
+  // Prefill from plant library (create mode)
   useEffect(() => {
-    if (!plantId || prefilled) return;
+    if (!plantId || prefilled || isEditMode) return;
 
     const supabase = createClient();
     supabase
@@ -102,7 +108,44 @@ export default function DonnerPage() {
           setPrefilled(true);
         }
       });
-  }, [plantId, prefilled, setValue]);
+  }, [plantId, prefilled, isEditMode, setValue]);
+
+  // Prefill from existing listing (edit mode)
+  useEffect(() => {
+    if (!editId || !userId || prefilled) return;
+
+    setEditLoading(true);
+    getListingForEdit(editId, userId)
+      .then((listing) => {
+        if (!listing) {
+          toast.error("Annonce introuvable ou non autorisée");
+          router.replace("/profil/annonces");
+          return;
+        }
+
+        reset({
+          species_name: listing.species_name,
+          species_id: listing.species_id ?? null,
+          size: listing.size as ListingFormData["size"],
+          photos: [],
+          description: listing.description ?? "",
+          address_city: listing.address_city ?? "",
+          address_lat: listing.lat,
+          address_lng: listing.lng,
+        });
+
+        if (listing.photos && listing.photos.length > 0) {
+          setPlantPhotoUrls(listing.photos);
+        }
+
+        setPrefilled(true);
+      })
+      .catch(() => {
+        toast.error("Erreur lors du chargement de l'annonce");
+        router.replace("/profil/annonces");
+      })
+      .finally(() => setEditLoading(false));
+  }, [editId, userId, prefilled, reset, setValue, router]);
 
   const description = watch("description") ?? "";
   const DESCRIPTION_MAX = 500;
@@ -142,18 +185,24 @@ export default function DonnerPage() {
 
     setPublishing(true);
     try {
-      const result = await createListing(userId, pendingData, {
-        existingPhotoUrls: plantPhotoUrls,
-      });
+      if (isEditMode && editId) {
+        await updateListing(userId, editId, pendingData, plantPhotoUrls);
+        toast.success("Annonce mise à jour !");
+        router.push("/profil/annonces");
+      } else {
+        const result = await createListing(userId, pendingData, {
+          existingPhotoUrls: plantPhotoUrls,
+        });
 
-      if (plantId) {
-        await updatePlant(plantId, { status: "for_donation" }).catch(
-          () => {},
-        );
+        if (plantId) {
+          await updatePlant(plantId, { status: "for_donation" }).catch(
+            () => {},
+          );
+        }
+
+        toast.success("Votre bouture est en ligne !");
+        router.push(`/carte?highlight=${result.id}`);
       }
-
-      toast.success("Votre bouture est en ligne !");
-      router.push(`/carte?highlight=${result.id}`);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Erreur lors de la publication",
@@ -162,15 +211,26 @@ export default function DonnerPage() {
     }
   };
 
+  if (editLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <AnimatePresence mode="wait">
       {step === "preview" && pendingData ? (
         <ListingPreview
           key="preview"
           data={pendingData}
+          existingPhotoUrls={plantPhotoUrls}
           onBack={() => setStep("form")}
           onPublish={onPublish}
           publishing={publishing}
+          publishLabel={isEditMode ? "Mettre à jour" : "Publier"}
+          publishingLabel={isEditMode ? "Mise à jour…" : "Publication…"}
         />
       ) : (
         <div key="form" className="flex flex-1 flex-col">
@@ -179,7 +239,7 @@ export default function DonnerPage() {
             <div className="flex items-center gap-2.5">
               <Leaf className="h-5 w-5 text-primary" />
               <h1 className="text-lg font-display font-semibold text-neutral-900">
-                Donner une bouture
+                {isEditMode ? "Modifier l'annonce" : "Donner une bouture"}
               </h1>
             </div>
           </header>
@@ -216,11 +276,11 @@ export default function DonnerPage() {
               )}
             />
 
-            {/* 3 — Photos */}
+            {/* 3 — Existing photos (plant library or edit mode) */}
             {plantPhotoUrls.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-neutral-900">
-                  Photos de votre plante
+                  {isEditMode ? "Photos actuelles" : "Photos de votre plante"}
                 </label>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {plantPhotoUrls.map((url, idx) => (
@@ -343,7 +403,7 @@ export default function DonnerPage() {
               className="w-full"
               onClick={handleSubmit(onPreview)}
             >
-              Aperçu avant publication
+              {isEditMode ? "Aperçu des modifications" : "Aperçu avant publication"}
             </Button>
           </div>
         </div>
