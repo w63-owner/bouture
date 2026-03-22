@@ -36,10 +36,10 @@ export async function generateMetadata({
   const listing = await getListing(listingId);
 
   if (!listing) {
-    return { title: "Annonce introuvable — bouture.com" };
+    return { title: "Annonce introuvable — bouture.app" };
   }
 
-  const title = `${listing.species_name} — bouture.com`;
+  const title = `${listing.species_name} — bouture.app`;
   const description = listing.description
     ? listing.description.slice(0, 160)
     : `Bouture de ${listing.species_name} disponible${listing.address_city ? ` à ${listing.address_city}` : ""}. Découvrez et échangez des boutures près de chez vous.`;

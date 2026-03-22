@@ -1,5 +1,5 @@
 -- =============================================================================
--- bouture.com — Initial database schema
+-- bouture.app — Initial database schema
 -- Extensions, Enums, Tables, Indexes, RLS, Functions, Triggers, Realtime
 -- =============================================================================
 

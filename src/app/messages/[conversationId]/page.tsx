@@ -14,10 +14,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { conversationId } = await params;
   const data = await getConversationWithDetails(conversationId);
-  if (!data) return { title: "Chat — bouture.com" };
+  if (!data) return { title: "Chat — bouture.app" };
 
   return {
-    title: `Chat avec ${data.otherUser.username} — bouture.com`,
+    title: `Chat avec ${data.otherUser.username} — bouture.app`,
   };
 }
 

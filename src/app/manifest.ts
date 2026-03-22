@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "bouture.com — Échange de boutures entre voisins",
+    name: "bouture.app — Échange de boutures entre voisins",
     short_name: "Bouture",
     description:
       "Découvrez et partagez des boutures de plantes près de chez vous",
@@ -20,9 +20,16 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
       {
+        src: "/icons/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
         src: "/icons/icon-512x512.png",
         sizes: "512x512",
         type: "image/png",
+        purpose: "any",
       },
     ],
   };

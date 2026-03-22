@@ -20,7 +20,7 @@ export default function AuthLayout({
         <div className="w-full max-w-[420px]">{children}</div>
 
         <p className="mt-8 text-center text-xs text-neutral-600">
-          © {new Date().getFullYear()} bouture.com — Échange de boutures entre
+          © {new Date().getFullYear()} bouture.app — Échange de boutures entre
           particuliers
         </p>
       </div>

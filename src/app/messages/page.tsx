@@ -5,7 +5,7 @@ import { ConversationRow } from "@/components/chat/conversation-row";
 import { EmptyConversations } from "@/components/chat/empty-conversations";
 
 export const metadata = {
-  title: "Messages — bouture.com",
+  title: "Messages — bouture.app",
 };
 
 export default async function MessagesPage() {

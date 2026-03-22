@@ -6,7 +6,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 webpush.setVapidDetails(
-  Deno.env.get("VAPID_SUBJECT") ?? "mailto:contact@bouture.com",
+  Deno.env.get("VAPID_SUBJECT") ?? "mailto:contact@bouture.app",
   Deno.env.get("VAPID_PUBLIC_KEY")!,
   Deno.env.get("VAPID_PRIVATE_KEY")!,
 );

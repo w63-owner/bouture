@@ -53,8 +53,8 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/carte/${listing.id}`;
     const shareData = {
-      title: `${listing.species_name} — bouture.com`,
-      text: `Découvre cette bouture de ${listing.species_name} sur bouture.com !`,
+      title: `${listing.species_name} — bouture.app`,
+      text: `Découvre cette bouture de ${listing.species_name} sur bouture.app !`,
       url,
     };
 
