@@ -10,6 +10,7 @@ import {
   Users,
   UserCheck,
   Settings,
+  Sparkles,
   ChevronRight,
   Loader2,
   LogOut,
@@ -30,7 +31,13 @@ const NAV_ITEMS = [
   { href: "/profil/abonnes", label: "Abonnés", icon: Users },
   { href: "/profil/abonnements", label: "Abonnements", icon: UserCheck },
   { href: "/profil/parametres", label: "Paramètres", icon: Settings },
-];
+  {
+    href: "https://www.forom.app/fr/pages/bouture-app",
+    label: "Aidez nous à améliorer bouture.app",
+    icon: Sparkles,
+    external: true,
+  },
+] as const;
 
 export default function ProfilPage() {
   const router = useRouter();
@@ -104,10 +111,13 @@ export default function ProfilPage() {
       {/* Navigation */}
       <nav className="mt-6 px-5">
         <ul className="divide-y divide-neutral-300/50 overflow-hidden rounded-card bg-white shadow-card">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          {NAV_ITEMS.map(({ href, label, icon: Icon, ...rest }) => (
             <li key={href}>
               <Link
                 href={href}
+                {...("external" in rest && rest.external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
                 className="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-neutral-100"
               >
                 <Icon className="h-5 w-5 text-primary" />
