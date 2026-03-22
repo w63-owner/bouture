@@ -55,7 +55,7 @@ export default function AdressePage() {
         .from("profiles")
         .select("address_city, address_lat, address_lng")
         .eq("id", user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data) {
             setCurrent({

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   Sprout,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
 ];
 
 export default function ProfilPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileWithStats | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,20 +41,24 @@ export default function ProfilPage() {
       const data = await getProfile(uid);
       setProfile(data);
     } catch {
-      // profile load failed
+      router.replace("/auth/onboarding");
+      return;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
+      if (!user) {
+        router.replace("/auth/login");
+        return;
+      }
       setUserId(user.id);
       loadProfile(user.id);
     });
-  }, [loadProfile]);
+  }, [loadProfile, router]);
 
   if (loading) {
     return (

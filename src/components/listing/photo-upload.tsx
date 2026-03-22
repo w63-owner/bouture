@@ -32,11 +32,17 @@ export function PhotoUpload({
   const dragOverIdxRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (value.length === 0 && items.length > 0) {
-      items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-      setItems([]);
+    if (value.length === 0) {
+      setItems((prev) => {
+        if (prev.length > 0) {
+          prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+          return [];
+        }
+        return prev;
+      });
     }
-  }, [value, items]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.length]);
 
   useEffect(() => {
     return () => {
@@ -81,7 +87,7 @@ export function PhotoUpload({
           const match = compressed.find((c) => c.id === p.id);
           return match ?? p;
         });
-        onChange(updated.map((u) => u.file));
+        queueMicrotask(() => onChange(updated.map((u) => u.file)));
         return updated;
       });
     },
@@ -94,7 +100,7 @@ export function PhotoUpload({
         const target = prev.find((p) => p.id === id);
         if (target) URL.revokeObjectURL(target.previewUrl);
         const updated = prev.filter((p) => p.id !== id);
-        onChange(updated.map((u) => u.file));
+        queueMicrotask(() => onChange(updated.map((u) => u.file)));
         return updated;
       });
     },
@@ -125,7 +131,7 @@ export function PhotoUpload({
         const copy = [...prev];
         const [moved] = copy.splice(from, 1);
         copy.splice(to, 0, moved);
-        onChange(copy.map((c) => c.file));
+        queueMicrotask(() => onChange(copy.map((c) => c.file)));
         return copy;
       });
 

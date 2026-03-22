@@ -49,7 +49,7 @@ export default function DonnerPage() {
         .from("profiles")
         .select("address_city, address_lat, address_lng")
         .eq("id", user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data) {
             setProfile({
