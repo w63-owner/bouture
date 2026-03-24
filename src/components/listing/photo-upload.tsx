@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Camera, X, ImagePlus, Loader2 } from "lucide-react";
+import { Camera, X, ImagePlus, Image, Loader2 } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { compressListingPhoto } from "@/lib/utils/image-compression";
 
 interface PhotoItem {
@@ -27,7 +28,9 @@ export function PhotoUpload({
   max = 5,
 }: PhotoUploadProps) {
   const [items, setItems] = useState<PhotoItem[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const dragIdxRef = useRef<number | null>(null);
   const dragOverIdxRef = useRef<number | null>(null);
 
@@ -203,7 +206,7 @@ export function PhotoUpload({
         {items.length < max && (
           <button
             type="button"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => setSourcePickerOpen(true)}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -224,10 +227,9 @@ export function PhotoUpload({
       </div>
 
       <input
-        ref={inputRef}
+        ref={cameraInputRef}
         type="file"
         accept={ACCEPTED_TYPES.join(",")}
-        multiple
         capture="environment"
         className="hidden"
         onChange={(e) => {
@@ -235,6 +237,65 @@ export function PhotoUpload({
           e.target.value = "";
         }}
       />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept={ACCEPTED_TYPES.join(",")}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) processFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
+      <Dialog.Root open={sourcePickerOpen} onOpenChange={setSourcePickerOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-sheet focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" />
+            <Dialog.Title className="sr-only">
+              Ajouter une photo
+            </Dialog.Title>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+                onClick={() => {
+                  setSourcePickerOpen(false);
+                  requestAnimationFrame(() => cameraInputRef.current?.click());
+                }}
+              >
+                <Camera className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-neutral-900">
+                  Prendre une photo
+                </span>
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+                onClick={() => {
+                  setSourcePickerOpen(false);
+                  requestAnimationFrame(() => galleryInputRef.current?.click());
+                }}
+              >
+                <Image className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium text-neutral-900">
+                  Choisir dans la galerie
+                </span>
+              </button>
+            </div>
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="mt-2 w-full rounded-xl bg-neutral-100 py-3 text-sm font-semibold text-neutral-600 transition-colors hover:bg-neutral-200"
+              >
+                Annuler
+              </button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       {error && (
         <p className="text-sm text-error" role="alert">
