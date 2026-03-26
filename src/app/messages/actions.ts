@@ -111,7 +111,7 @@ export async function proposeExchange(
 
   const { data: listing, error: listingError } = await supabase
     .from("listings")
-    .select("donor_id, species_name")
+    .select("donor_id, species_name, photos")
     .eq("id", listingId)
     .single();
 
@@ -120,7 +120,7 @@ export async function proposeExchange(
 
   const { data: offeredListing, error: offeredError } = await supabase
     .from("listings")
-    .select("species_name, donor_id")
+    .select("species_name, donor_id, photos")
     .eq("id", offeredListingId)
     .single();
 
@@ -133,20 +133,6 @@ export async function proposeExchange(
     .eq("id", user.id)
     .single();
 
-  const { data: transaction, error: txError } = await supabase
-    .from("transactions")
-    .insert({
-      giver_id: listing.donor_id,
-      receiver_id: user.id,
-      listing_id: listingId,
-      offered_listing_id: offeredListingId,
-      status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (txError) throw new Error(`Échec de la proposition : ${txError.message}`);
-
   const { data: conversationId, error: convError } = await supabase.rpc(
     "get_or_create_conversation",
     { other_user_id: listing.donor_id, for_listing_id: listingId },
@@ -156,17 +142,40 @@ export async function proposeExchange(
     throw new Error(convError?.message ?? "Impossible de créer la conversation");
   }
 
-  await supabase
+  const { data: transaction, error: txError } = await supabase
     .from("transactions")
-    .update({ conversation_id: conversationId })
-    .eq("id", transaction.id);
+    .insert({
+      giver_id: listing.donor_id,
+      receiver_id: user.id,
+      listing_id: listingId,
+      offered_listing_id: offeredListingId,
+      conversation_id: conversationId,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (txError) throw new Error(`Échec de la proposition : ${txError.message}`);
 
   const username = profile?.username ?? "Quelqu'un";
   await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_id: user.id,
-    content: `🔄 ${username} propose un échange : ${offeredListing.species_name} contre ${listing.species_name}`,
-    type: "text",
+    type: "exchange_proposal",
+    metadata: {
+      transaction_id: transaction.id,
+      proposer_username: username,
+      offered_listing: {
+        id: offeredListingId,
+        species_name: offeredListing.species_name,
+        photo: offeredListing.photos?.[0] ?? null,
+      },
+      requested_listing: {
+        id: listingId,
+        species_name: listing.species_name,
+        photo: listing.photos?.[0] ?? null,
+      },
+    },
   });
 
   return conversationId as string;

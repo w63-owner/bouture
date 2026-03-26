@@ -276,6 +276,7 @@ export type Database = {
           content: string | null;
           type: Database["public"]["Enums"]["message_type"];
           image_url: string | null;
+          metadata: Record<string, unknown> | null;
           status: Database["public"]["Enums"]["message_status"];
           created_at: string;
         };
@@ -286,6 +287,7 @@ export type Database = {
           content?: string | null;
           type?: Database["public"]["Enums"]["message_type"];
           image_url?: string | null;
+          metadata?: Record<string, unknown> | null;
           status?: Database["public"]["Enums"]["message_status"];
           created_at?: string;
         };
@@ -296,6 +298,7 @@ export type Database = {
           content?: string | null;
           type?: Database["public"]["Enums"]["message_type"];
           image_url?: string | null;
+          metadata?: Record<string, unknown> | null;
           status?: Database["public"]["Enums"]["message_status"];
           created_at?: string;
         };
@@ -537,7 +540,7 @@ export type Database = {
         | "l"
         | "xl"
         | "xxl";
-      message_type: "text" | "image";
+      message_type: "text" | "image" | "exchange_proposal";
       message_status: "sending" | "sent" | "delivered" | "read";
       plant_status: "collection" | "for_donation" | "donated";
       transaction_type: "don_uniquement" | "echange_uniquement" | "les_deux";

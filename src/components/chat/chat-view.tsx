@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useChatRealtime } from "@/lib/hooks/use-chat-realtime";
 import { useMarkAsRead } from "@/lib/hooks/use-mark-as-read";
 import { useChatPresence } from "@/lib/hooks/use-chat-presence";
@@ -11,6 +11,10 @@ import { MessageBubble } from "./message-bubble";
 import { DateSeparator } from "./date-separator";
 import { TypingBubble } from "./typing-bubble";
 import { MessageInput } from "./message-input";
+import {
+  ExchangeProposalBubble,
+  type ExchangeProposalMetadata,
+} from "./exchange-proposal-bubble";
 import {
   getTransactionByConversation,
   type TransactionWithListings,
@@ -69,9 +73,13 @@ export function ChatView({
   const [transaction, setTransaction] =
     useState<TransactionWithListings | null>(null);
 
-  useEffect(() => {
+  const refreshTransaction = useCallback(() => {
     getTransactionByConversation(conversationId).then(setTransaction);
   }, [conversationId]);
+
+  useEffect(() => {
+    refreshTransaction();
+  }, [refreshTransaction]);
 
   return (
     <div className="flex h-dvh flex-col bg-white">
@@ -102,17 +110,32 @@ export function ChatView({
         {messages.map((msg, i) => {
           const showDate =
             i === 0 || !isSameDay(messages[i - 1].created_at, msg.created_at);
+
+          const isExchangeProposal = msg.type === "exchange_proposal" && msg.metadata;
+
           return (
             <div key={msg.id}>
               {showDate && <DateSeparator date={msg.created_at} />}
-              <MessageBubble
-                content={msg.content}
-                type={msg.type}
-                imageUrl={msg.image_url}
-                isMine={msg.sender_id === currentUserId}
-                timestamp={msg.created_at}
-                status={msg.status}
-              />
+              {isExchangeProposal ? (
+                <ExchangeProposalBubble
+                  metadata={msg.metadata as unknown as ExchangeProposalMetadata}
+                  isMine={msg.sender_id === currentUserId}
+                  timestamp={msg.created_at}
+                  messageStatus={msg.status}
+                  transaction={transaction}
+                  currentUserId={currentUserId}
+                  onTransactionUpdate={refreshTransaction}
+                />
+              ) : (
+                <MessageBubble
+                  content={msg.content}
+                  type={msg.type}
+                  imageUrl={msg.image_url}
+                  isMine={msg.sender_id === currentUserId}
+                  timestamp={msg.created_at}
+                  status={msg.status}
+                />
+              )}
             </div>
           );
         })}

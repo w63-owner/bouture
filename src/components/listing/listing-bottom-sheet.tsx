@@ -18,6 +18,8 @@ import { toast } from "@/components/ui/toast";
 import { timeAgo } from "@/lib/utils/time-ago";
 import { startConversation } from "@/app/messages/actions";
 import { Lightbox } from "@/components/ui/lightbox";
+import { ExchangeProposalModal } from "./exchange-proposal-modal";
+import { createClient } from "@/lib/supabase/client";
 
 const DISMISS_THRESHOLD = 100;
 
@@ -38,10 +40,24 @@ export function ListingBottomSheet() {
   const clearSelection = useMapStore((s) => s.clearSelection);
   const [isPending, startTransition] = useTransition();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => setCurrentUserId(user?.id ?? null));
+  }, []);
 
   useEffect(() => {
     setLightboxIndex(null);
+    setShowExchangeModal(false);
   }, [selectedListing?.id]);
+
+  const txType = selectedListing?.transaction_type;
+  const isOwner = currentUserId === selectedListing?.donor_id;
+  const showContact = txType === "don_uniquement" || txType === "les_deux";
+  const showExchange = txType === "echange_uniquement" || txType === "les_deux";
 
   const y = useMotionValue(0);
   const opacity = useTransform(y, [0, 300], [1, 0]);
@@ -186,18 +202,50 @@ export function ListingBottomSheet() {
                 </div>
               </div>
 
-              {/* CTA */}
-              <Button
-                variant="primary"
-                className="w-full"
-                loading={isPending}
-                onClick={handleContactClick}
-              >
-                <MessageCircle className="h-5 w-5" />
-                Contacter le donneur
-              </Button>
+              {/* CTA(s) */}
+              {!isOwner && (
+                <div className="flex flex-col gap-2">
+                  {showExchange && currentUserId && (
+                    <Button
+                      variant="primary"
+                      className="w-full"
+                      onClick={() => setShowExchangeModal(true)}
+                    >
+                      <Repeat2 className="h-5 w-5" />
+                      Proposer un échange
+                    </Button>
+                  )}
+                  {showContact && (
+                    <Button
+                      variant={showExchange ? "outline" : "primary"}
+                      className="w-full"
+                      loading={isPending}
+                      onClick={handleContactClick}
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      Contacter le donneur
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
+
+          {/* Exchange proposal modal */}
+          {currentUserId && showExchange && selectedListing && (
+            <ExchangeProposalModal
+              open={showExchangeModal}
+              onClose={() => setShowExchangeModal(false)}
+              targetListing={{
+                id: selectedListing.id,
+                species_name: selectedListing.species_name,
+                size: selectedListing.size,
+                photos: selectedListing.photos,
+                donor_id: selectedListing.donor_id,
+              }}
+              currentUserId={currentUserId}
+            />
+          )}
 
           <AnimatePresence>
             {lightboxIndex !== null && (
