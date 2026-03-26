@@ -97,3 +97,77 @@ export async function sendImageMessage(
 
   if (error) throw new Error(error.message);
 }
+
+export async function proposeExchange(
+  listingId: string,
+  offeredListingId: string,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié");
+
+  const { data: listing, error: listingError } = await supabase
+    .from("listings")
+    .select("donor_id, species_name")
+    .eq("id", listingId)
+    .single();
+
+  if (listingError || !listing) throw new Error("Annonce introuvable");
+  if (listing.donor_id === user.id) throw new Error("Vous ne pouvez pas échanger avec vous-même");
+
+  const { data: offeredListing, error: offeredError } = await supabase
+    .from("listings")
+    .select("species_name, donor_id")
+    .eq("id", offeredListingId)
+    .single();
+
+  if (offeredError || !offeredListing) throw new Error("Annonce offerte introuvable");
+  if (offeredListing.donor_id !== user.id) throw new Error("Cette annonce ne vous appartient pas");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  const { data: transaction, error: txError } = await supabase
+    .from("transactions")
+    .insert({
+      giver_id: listing.donor_id,
+      receiver_id: user.id,
+      listing_id: listingId,
+      offered_listing_id: offeredListingId,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (txError) throw new Error(`Échec de la proposition : ${txError.message}`);
+
+  const { data: conversationId, error: convError } = await supabase.rpc(
+    "get_or_create_conversation",
+    { other_user_id: listing.donor_id, for_listing_id: listingId },
+  );
+
+  if (convError || !conversationId) {
+    throw new Error(convError?.message ?? "Impossible de créer la conversation");
+  }
+
+  await supabase
+    .from("transactions")
+    .update({ conversation_id: conversationId })
+    .eq("id", transaction.id);
+
+  const username = profile?.username ?? "Quelqu'un";
+  await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    content: `🔄 ${username} propose un échange : ${offeredListing.species_name} contre ${listing.species_name}`,
+    type: "text",
+  });
+
+  return conversationId as string;
+}

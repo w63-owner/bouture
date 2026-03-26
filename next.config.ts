@@ -13,6 +13,20 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
+  async redirects() {
+    return [
+      {
+        source: "/profil/bibliotheque",
+        destination: "/collection",
+        permanent: true,
+      },
+      {
+        source: "/profil/bibliotheque/:path*",
+        destination: "/collection/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withSerwist(nextConfig);

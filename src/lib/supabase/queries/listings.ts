@@ -17,6 +17,7 @@ export async function getListingsInBounds(
     filter_radius_km: filters?.radiusKm ?? null,
     center_lat: filters?.centerLat ?? null,
     center_lng: filters?.centerLng ?? null,
+    p_species_id: filters?.speciesId ?? null,
   });
 
   if (error) {
@@ -59,7 +60,7 @@ export async function getListingForEdit(listingId: string, userId: string) {
   const [listingRes, coordsRes] = await Promise.all([
     supabase
       .from("listings")
-      .select("id, donor_id, species_name, species_id, size, description, photos, address_city, is_active")
+      .select("id, donor_id, species_name, species_id, size, transaction_type, description, photos, address_city, is_active, plant_library_id")
       .eq("id", listingId)
       .eq("donor_id", userId)
       .single(),

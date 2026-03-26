@@ -9,7 +9,7 @@ import {
   useTransform,
   type PanInfo,
 } from "framer-motion";
-import { X, MessageCircle, Clock } from "lucide-react";
+import { X, MessageCircle, Clock, Repeat2 } from "lucide-react";
 import { useMapStore } from "@/lib/stores/map-store";
 import { PhotoCarousel } from "@/components/ui/carousel";
 import { SizeBadge } from "@/components/ui/badge";
@@ -121,15 +121,22 @@ export function ListingBottomSheet() {
 
             {/* Content */}
             <div className="px-5 pt-4 pb-6 space-y-4">
-              {/* Title + badge */}
+              {/* Title + badges */}
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-xl font-heading font-semibold text-neutral-900 leading-tight">
                   {selectedListing.species_name}
                 </h2>
-                <SizeBadge
-                  size={selectedListing.size}
-                  className="shrink-0 mt-0.5"
-                />
+                <div className="flex shrink-0 items-center gap-1.5 mt-0.5">
+                  {selectedListing.transaction_type !== "don_uniquement" && (
+                    <span className="inline-flex items-center gap-1 rounded-pill bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                      <Repeat2 className="h-3 w-3" />
+                      {selectedListing.transaction_type === "echange_uniquement"
+                        ? "Échange"
+                        : "Don & Échange"}
+                    </span>
+                  )}
+                  <SizeBadge size={selectedListing.size} />
+                </div>
               </div>
 
               {/* Description */}

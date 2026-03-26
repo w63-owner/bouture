@@ -10,6 +10,7 @@ export interface CreateListingResult {
 
 export interface CreateListingOptions {
   existingPhotoUrls?: string[];
+  plantLibraryId?: string;
 }
 
 export async function createListing(
@@ -39,12 +40,14 @@ export async function createListing(
     species_name: data.species_name,
     species_id: data.species_id,
     size: data.size,
+    transaction_type: data.transaction_type,
     description: data.description || null,
     photos: allPhotos,
     location_exact: `SRID=4326;POINT(${data.address_lng} ${data.address_lat})`,
     location_public: `SRID=4326;POINT(${jittered.lng} ${jittered.lat})`,
     address_city: data.address_city,
     is_active: true,
+    plant_library_id: options?.plantLibraryId ?? null,
   });
 
   if (error) throw new Error(`Failed to create listing: ${error.message}`);
@@ -93,6 +96,7 @@ export async function updateListing(
       species_name: data.species_name,
       species_id: data.species_id,
       size: data.size,
+      transaction_type: data.transaction_type,
       description: data.description || null,
       photos: allPhotos,
       location_exact: `SRID=4326;POINT(${data.address_lng} ${data.address_lat})`,

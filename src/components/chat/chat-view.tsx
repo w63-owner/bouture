@@ -1,14 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useChatRealtime } from "@/lib/hooks/use-chat-realtime";
 import { useMarkAsRead } from "@/lib/hooks/use-mark-as-read";
 import { useChatPresence } from "@/lib/hooks/use-chat-presence";
 import { ChatHeader } from "./chat-header";
 import { ContextCard } from "./context-card";
+import { TransactionCard } from "./transaction-card";
 import { MessageBubble } from "./message-bubble";
 import { DateSeparator } from "./date-separator";
 import { TypingBubble } from "./typing-bubble";
 import { MessageInput } from "./message-input";
+import {
+  getTransactionByConversation,
+  type TransactionWithListings,
+} from "@/lib/supabase/queries/transactions";
 import type { Tables } from "@/lib/types/database.types";
 
 type Message = Tables<"messages">;
@@ -60,6 +66,13 @@ export function ChatView({
     currentUserId,
   );
 
+  const [transaction, setTransaction] =
+    useState<TransactionWithListings | null>(null);
+
+  useEffect(() => {
+    getTransactionByConversation(conversationId).then(setTransaction);
+  }, [conversationId]);
+
   return (
     <div className="flex h-dvh flex-col bg-white">
       <ChatHeader
@@ -68,13 +81,20 @@ export function ChatView({
         isOnline={isOtherUserOnline}
       />
 
-      {listing && (
+      {listing && !transaction && (
         <ContextCard
           listingId={listing.id}
           speciesName={listing.species_name}
           size={listing.size}
           photo={listing.photos[0] ?? null}
           isActive={listing.is_active}
+        />
+      )}
+
+      {transaction && (
+        <TransactionCard
+          transaction={transaction}
+          currentUserId={currentUserId}
         />
       )}
 

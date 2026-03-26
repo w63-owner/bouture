@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, Leaf, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, Leaf, Clock, Repeat2 } from "lucide-react";
 import { PhotoCarousel } from "@/components/ui/carousel";
 import { SizeBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,12 +96,22 @@ export function ListingPreview({
           />
 
           <div className="space-y-4 px-5 pt-4 pb-5">
-            {/* Title + badge */}
+            {/* Title + badges */}
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-xl font-heading font-semibold leading-tight text-neutral-900">
                 {data.species_name}
               </h2>
-              <SizeBadge size={data.size} className="mt-0.5 shrink-0" />
+              <div className="flex shrink-0 items-center gap-1.5 mt-0.5">
+                {data.transaction_type && data.transaction_type !== "don_uniquement" && (
+                  <span className="inline-flex items-center gap-1 rounded-pill bg-[#C67B5C]/15 px-2.5 py-0.5 text-xs font-semibold text-[#C67B5C]">
+                    <Repeat2 className="h-3 w-3" />
+                    {data.transaction_type === "echange_uniquement"
+                      ? "Échange"
+                      : "Don & Échange"}
+                  </span>
+                )}
+                <SizeBadge size={data.size} />
+              </div>
             </div>
 
             {/* Description */}

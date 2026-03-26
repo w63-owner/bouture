@@ -4,18 +4,23 @@ import { useEffect, useState, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Leaf, X, Loader2 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { Leaf, X, Loader2, Sprout, Check } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { listingFormSchema, type ListingFormData } from "@/lib/schemas/listing";
 import { createClient } from "@/lib/supabase/client";
 import { createListing, updateListing } from "@/lib/supabase/mutations/listings";
 import { getListingForEdit } from "@/lib/supabase/queries/listings";
-import { updatePlant } from "@/lib/supabase/queries/plant-library";
+import {
+  getUserCollectionPlants,
+  updatePlant,
+  type PlantLibraryItem,
+} from "@/lib/supabase/queries/plant-library";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { SpeciesAutocomplete } from "@/components/listing/species-autocomplete";
 import { SizeSelector } from "@/components/listing/size-selector";
+import { TransactionTypeSelector } from "@/components/listing/transaction-type-selector";
 import { PhotoUpload } from "@/components/listing/photo-upload";
 import { AddressPicker } from "@/components/listing/address-picker";
 import { ListingPreview } from "@/components/listing/listing-preview";
@@ -31,7 +36,7 @@ type PageStep = "form" | "preview";
 export default function DonnerPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plantId = searchParams.get("plantId");
+  const plantIdParam = searchParams.get("plantId");
   const editId = searchParams.get("edit");
   const isEditMode = Boolean(editId);
 
@@ -43,6 +48,10 @@ export default function DonnerPage() {
   const [prefilled, setPrefilled] = useState(false);
   const [plantPhotoUrls, setPlantPhotoUrls] = useState<string[]>([]);
   const [editLoading, setEditLoading] = useState(isEditMode);
+
+  const [collectionPlants, setCollectionPlants] = useState<PlantLibraryItem[]>([]);
+  const [collectionLoading, setCollectionLoading] = useState(true);
+  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -63,8 +72,19 @@ export default function DonnerPage() {
             });
           }
         });
+
+      getUserCollectionPlants(user.id)
+        .then((plants) => {
+          setCollectionPlants(plants);
+          if (plantIdParam) {
+            const match = plants.find((p) => p.id === plantIdParam);
+            if (match) setSelectedPlantId(match.id);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setCollectionLoading(false));
     });
-  }, []);
+  }, [plantIdParam]);
 
   const {
     control,
@@ -80,6 +100,7 @@ export default function DonnerPage() {
       species_name: "",
       species_id: null,
       size: undefined,
+      transaction_type: "don_uniquement",
       photos: [],
       description: "",
       address_city: "",
@@ -88,27 +109,30 @@ export default function DonnerPage() {
     },
   });
 
-  // Prefill from plant library (create mode)
-  useEffect(() => {
-    if (!plantId || prefilled || isEditMode) return;
+  const selectPlant = useCallback(
+    (plant: PlantLibraryItem) => {
+      setSelectedPlantId(plant.id);
+      setValue("species_name", plant.species_name, { shouldValidate: true });
+      setValue("species_id", plant.species_id);
+      if (plant.photos && plant.photos.length > 0) {
+        setPlantPhotoUrls(plant.photos);
+      } else {
+        setPlantPhotoUrls([]);
+      }
+    },
+    [setValue],
+  );
 
-    const supabase = createClient();
-    supabase
-      .from("plant_library")
-      .select("species_name, species_id, photos")
-      .eq("id", plantId)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setValue("species_name", data.species_name, { shouldValidate: true });
-          setValue("species_id", data.species_id);
-          if (data.photos && data.photos.length > 0) {
-            setPlantPhotoUrls(data.photos);
-          }
-          setPrefilled(true);
-        }
-      });
-  }, [plantId, prefilled, isEditMode, setValue]);
+  // Auto-select from ?plantId= param once collection loads
+  useEffect(() => {
+    if (!plantIdParam || prefilled || isEditMode || collectionLoading) return;
+
+    const match = collectionPlants.find((p) => p.id === plantIdParam);
+    if (match) {
+      selectPlant(match);
+      setPrefilled(true);
+    }
+  }, [plantIdParam, prefilled, isEditMode, collectionLoading, collectionPlants, selectPlant]);
 
   // Prefill from existing listing (edit mode)
   useEffect(() => {
@@ -127,6 +151,7 @@ export default function DonnerPage() {
           species_name: listing.species_name,
           species_id: listing.species_id ?? null,
           size: listing.size as ListingFormData["size"],
+          transaction_type: (listing.transaction_type as ListingFormData["transaction_type"]) ?? "don_uniquement",
           photos: [],
           description: listing.description ?? "",
           address_city: listing.address_city ?? "",
@@ -138,6 +163,10 @@ export default function DonnerPage() {
           setPlantPhotoUrls(listing.photos);
         }
 
+        if (listing.plant_library_id) {
+          setSelectedPlantId(listing.plant_library_id);
+        }
+
         setPrefilled(true);
       })
       .catch(() => {
@@ -145,7 +174,7 @@ export default function DonnerPage() {
         router.replace("/profil/annonces");
       })
       .finally(() => setEditLoading(false));
-  }, [editId, userId, prefilled, reset, setValue, router]);
+  }, [editId, userId, prefilled, reset, router]);
 
   const description = watch("description") ?? "";
   const DESCRIPTION_MAX = 500;
@@ -192,10 +221,11 @@ export default function DonnerPage() {
       } else {
         const result = await createListing(userId, pendingData, {
           existingPhotoUrls: plantPhotoUrls,
+          plantLibraryId: selectedPlantId ?? undefined,
         });
 
-        if (plantId) {
-          await updatePlant(plantId, { status: "for_donation" }).catch(
+        if (selectedPlantId) {
+          await updatePlant(selectedPlantId, { status: "for_donation" }).catch(
             () => {},
           );
         }
@@ -211,10 +241,48 @@ export default function DonnerPage() {
     }
   };
 
-  if (editLoading) {
+  if (editLoading || collectionLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Empty collection state (create mode only)
+  if (!isEditMode && collectionPlants.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <header className="sticky top-0 z-10 border-b border-neutral-300/50 bg-background/80 px-5 py-4 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <Leaf className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-display font-semibold text-neutral-900">
+              Donner une bouture
+            </h1>
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+            <Sprout className="h-12 w-12 text-primary" />
+          </div>
+          <div>
+            <p className="text-lg font-display font-semibold text-neutral-900">
+              Votre Collection est vide
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-neutral-600">
+              Pour proposer une bouture en don, ajoutez d&apos;abord une plante
+              à votre Collection.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => router.push("/collection/ajouter?redirect=/donner")}
+          >
+            <Sprout className="h-4 w-4" />
+            Ajouter une plante à ma Collection
+          </Button>
+        </div>
       </div>
     );
   }
@@ -249,6 +317,61 @@ export default function DonnerPage() {
             onSubmit={handleSubmit(onPreview)}
             className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 pt-5 pb-32"
           >
+            {/* 0 — Plant Selector (create mode only) */}
+            {!isEditMode && collectionPlants.length > 0 && (
+              <div className="flex flex-col gap-1.5 -mx-5">
+                <label className="px-5 text-sm font-semibold text-neutral-900">
+                  Sélectionnez une plante
+                </label>
+                <div
+                  className="flex gap-3 overflow-x-auto px-5 pb-1"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  {collectionPlants.map((plant) => {
+                    const isSelected = selectedPlantId === plant.id;
+                    const photo = plant.photos?.[0];
+                    return (
+                      <motion.button
+                        key={plant.id}
+                        type="button"
+                        onClick={() => selectPlant(plant)}
+                        whileTap={{ scale: 0.95 }}
+                        className={`relative flex shrink-0 flex-col items-center gap-1.5 rounded-card p-1.5 transition-all duration-150 ${
+                          isSelected
+                            ? "bg-primary/10 ring-2 ring-primary"
+                            : "bg-neutral-50 ring-1 ring-neutral-200 hover:ring-primary/40"
+                        }`}
+                        style={{ width: 88 }}
+                      >
+                        <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-neutral-100">
+                          {photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={photo}
+                              alt={plant.species_name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Sprout className="h-6 w-6 text-neutral-300" />
+                            </div>
+                          )}
+                          {isSelected && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
+                              <Check className="h-5 w-5 text-white drop-shadow-sm" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="w-full truncate text-center text-[11px] font-medium text-neutral-800">
+                          {plant.species_name}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 1 — Species */}
             <Controller
               control={control}
@@ -276,7 +399,20 @@ export default function DonnerPage() {
               )}
             />
 
-            {/* 3 — Existing photos (plant library or edit mode) */}
+            {/* 3 — Transaction Type */}
+            <Controller
+              control={control}
+              name="transaction_type"
+              render={({ field }) => (
+                <TransactionTypeSelector
+                  value={field.value}
+                  onChange={(type) => field.onChange(type)}
+                  error={errors.transaction_type?.message}
+                />
+              )}
+            />
+
+            {/* 4 — Existing photos (plant library or edit mode) */}
             {plantPhotoUrls.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-neutral-900">
@@ -325,7 +461,7 @@ export default function DonnerPage() {
               )}
             />
 
-            {/* 4 — Description */}
+            {/* 5 — Description */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between">
                 <label
@@ -375,7 +511,7 @@ export default function DonnerPage() {
               )}
             </div>
 
-            {/* 5 — Address */}
+            {/* 6 — Address */}
             <AddressPicker
               profileCity={profile?.city ?? null}
               profileLat={profile?.lat ?? null}

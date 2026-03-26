@@ -34,7 +34,7 @@ export function PlantCard({ id, speciesName, photo, status }: PlantCardProps) {
 
   return (
     <Link
-      href={`/profil/bibliotheque/${id}`}
+      href={`/collection/${id}`}
       className="group flex flex-col overflow-hidden rounded-card bg-white shadow-card transition-shadow hover:shadow-md"
     >
       <div className="relative aspect-square bg-neutral-100">

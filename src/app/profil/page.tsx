@@ -27,7 +27,7 @@ import { EditProfileSheet } from "@/components/profile/edit-profile-sheet";
 const NAV_ITEMS = [
   { href: "/profil/annonces", label: "Mes annonces", icon: Megaphone },
   { href: "/profil/adresse", label: "Adresse", icon: MapPin },
-  { href: "/profil/bibliotheque", label: "Bibliothèque de plantes", icon: Sprout },
+  { href: "/collection", label: "Ma Collection", icon: Sprout },
   { href: "/profil/abonnes", label: "Abonnés", icon: Users },
   { href: "/profil/abonnements", label: "Abonnements", icon: UserCheck },
   { href: "/profil/parametres", label: "Paramètres", icon: Settings },

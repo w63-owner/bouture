@@ -1,5 +1,10 @@
-import { MapView } from "@/components/map/map-view";
+import { Suspense } from "react";
+import { CarteContent } from "@/components/map/carte-content";
 
 export default function CartePage() {
-  return <MapView />;
+  return (
+    <Suspense>
+      <CarteContent />
+    </Suspense>
+  );
 }

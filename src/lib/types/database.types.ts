@@ -157,6 +157,7 @@ export type Database = {
           address_city: string | null;
           is_active: boolean;
           plant_library_id: string | null;
+          transaction_type: Database["public"]["Enums"]["transaction_type"];
           created_at: string;
           updated_at: string;
         };
@@ -173,6 +174,7 @@ export type Database = {
           address_city?: string | null;
           is_active?: boolean;
           plant_library_id?: string | null;
+          transaction_type?: Database["public"]["Enums"]["transaction_type"];
           created_at?: string;
           updated_at?: string;
         };
@@ -189,6 +191,7 @@ export type Database = {
           address_city?: string | null;
           is_active?: boolean;
           plant_library_id?: string | null;
+          transaction_type?: Database["public"]["Enums"]["transaction_type"];
           created_at?: string;
           updated_at?: string;
         };
@@ -381,6 +384,84 @@ export type Database = {
           },
         ];
       };
+      transactions: {
+        Row: {
+          id: string;
+          giver_id: string;
+          receiver_id: string;
+          listing_id: string;
+          offered_listing_id: string | null;
+          conversation_id: string | null;
+          status: Database["public"]["Enums"]["transaction_status"];
+          giver_confirmed_at: string | null;
+          receiver_confirmed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          giver_id: string;
+          receiver_id: string;
+          listing_id: string;
+          offered_listing_id?: string | null;
+          conversation_id?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          giver_confirmed_at?: string | null;
+          receiver_confirmed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          giver_id?: string;
+          receiver_id?: string;
+          listing_id?: string;
+          offered_listing_id?: string | null;
+          conversation_id?: string | null;
+          status?: Database["public"]["Enums"]["transaction_status"];
+          giver_confirmed_at?: string | null;
+          receiver_confirmed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "transactions_giver_id_fkey";
+            columns: ["giver_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_receiver_id_fkey";
+            columns: ["receiver_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_listing_id_fkey";
+            columns: ["listing_id"];
+            isOneToOne: false;
+            referencedRelation: "listings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_offered_listing_id_fkey";
+            columns: ["offered_listing_id"];
+            isOneToOne: false;
+            referencedRelation: "listings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "conversations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -399,6 +480,7 @@ export type Database = {
           filter_radius_km?: number | null;
           center_lat?: number | null;
           center_lng?: number | null;
+          p_species_id?: number | null;
         };
         Returns: {
           id: string;
@@ -413,6 +495,7 @@ export type Database = {
           donor_username: string;
           donor_avatar: string | null;
           created_at: string;
+          transaction_type: Database["public"]["Enums"]["transaction_type"];
         }[];
       };
       get_or_create_conversation: {
@@ -457,6 +540,15 @@ export type Database = {
       message_type: "text" | "image";
       message_status: "sending" | "sent" | "delivered" | "read";
       plant_status: "collection" | "for_donation" | "donated";
+      transaction_type: "don_uniquement" | "echange_uniquement" | "les_deux";
+      transaction_status:
+        | "pending"
+        | "accepted"
+        | "rejected"
+        | "cancelled"
+        | "giver_confirmed"
+        | "receiver_confirmed"
+        | "completed";
     };
     CompositeTypes: {
       [_ in never]: never;

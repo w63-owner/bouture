@@ -1,6 +1,8 @@
 import type { Database } from "./database.types";
 
 export type ListingSize = Database["public"]["Enums"]["listing_size"];
+export type TransactionType = Database["public"]["Enums"]["transaction_type"];
+export type TransactionStatus = Database["public"]["Enums"]["transaction_status"];
 
 export interface ListingInBounds {
   id: string;
@@ -15,6 +17,7 @@ export interface ListingInBounds {
   donor_username: string;
   donor_avatar: string | null;
   created_at: string;
+  transaction_type: TransactionType;
 }
 
 export interface MapBounds {
@@ -30,4 +33,6 @@ export interface ListingFilters {
   radiusKm?: number;
   centerLat?: number;
   centerLng?: number;
+  speciesId?: number;
+  speciesName?: string;
 }

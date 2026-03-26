@@ -11,11 +11,20 @@ const LISTING_SIZES = [
   "xxl",
 ] as const;
 
+const TRANSACTION_TYPES = [
+  "don_uniquement",
+  "echange_uniquement",
+  "les_deux",
+] as const;
+
 export const listingFormSchema = z.object({
   species_name: z.string().min(1, "Choisis une espèce"),
   species_id: z.number().nullable(),
   size: z.enum(LISTING_SIZES, {
     error: "Choisis une taille",
+  }),
+  transaction_type: z.enum(TRANSACTION_TYPES, {
+    error: "Choisis un type de transaction",
   }),
   photos: z
     .array(z.instanceof(File))

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 
 interface PhotoCarouselProps {
@@ -8,6 +9,8 @@ interface PhotoCarouselProps {
   alt?: string;
   aspectRatio?: string;
   className?: string;
+  layoutIdPrefix?: string;
+  onPhotoClick?: (index: number) => void;
 }
 
 export function PhotoCarousel({
@@ -15,6 +18,8 @@ export function PhotoCarousel({
   alt = "Photo",
   aspectRatio = "4/3",
   className = "",
+  layoutIdPrefix,
+  onPhotoClick,
 }: PhotoCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,19 +49,38 @@ export function PhotoCarousel({
     );
   }
 
+  const ImageTag = layoutIdPrefix ? motion.img : "img";
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
       <div ref={emblaRef} className="overflow-hidden">
         <div className="flex">
           {photos.map((src, i) => (
-            <div key={src} className="flex-[0_0_100%] min-w-0">
-              <img
+            <div
+              key={src}
+              className="flex-[0_0_100%] min-w-0"
+              style={{ aspectRatio }}
+            >
+              <ImageTag
                 src={src}
                 alt={`${alt} ${i + 1}`}
-                className="w-full object-cover"
+                className={`w-full object-cover${onPhotoClick ? " cursor-zoom-in" : ""}`}
                 style={{ aspectRatio }}
                 loading={i === 0 ? "eager" : "lazy"}
                 draggable={false}
+                onClick={onPhotoClick ? () => onPhotoClick(i) : undefined}
+                {...(layoutIdPrefix
+                  ? {
+                      layoutId: `${layoutIdPrefix}-${i}`,
+                      transition: {
+                        layout: {
+                          type: "spring",
+                          stiffness: 350,
+                          damping: 30,
+                        },
+                      },
+                    }
+                  : {})}
               />
             </div>
           ))}

@@ -10,6 +10,7 @@ import {
 } from "framer-motion";
 import { X } from "lucide-react";
 import { useMapStore } from "@/lib/stores/map-store";
+import { SpeciesAutocomplete } from "@/components/listing/species-autocomplete";
 import { Chip } from "@/components/ui/chip";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -49,13 +50,21 @@ export function FilterSheet({ open, onClose }: FilterSheetProps) {
     filters.sizes ?? [],
   );
   const [radius, setRadius] = useState(filters.radiusKm ?? DEFAULT_RADIUS);
+  const [localSpeciesName, setLocalSpeciesName] = useState(
+    filters.speciesName ?? "",
+  );
+  const [localSpeciesId, setLocalSpeciesId] = useState<number | null>(
+    filters.speciesId ?? null,
+  );
 
   useEffect(() => {
     if (open) {
       setSelectedSizes(filters.sizes ?? []);
       setRadius(filters.radiusKm ?? DEFAULT_RADIUS);
+      setLocalSpeciesName(filters.speciesName ?? "");
+      setLocalSpeciesId(filters.speciesId ?? null);
     }
-  }, [open, filters.sizes, filters.radiusKm]);
+  }, [open, filters.sizes, filters.radiusKm, filters.speciesId, filters.speciesName]);
 
   const y = useMotionValue(0);
   const backdropOpacity = useTransform(y, [0, 400], [0.3, 0]);
@@ -75,23 +84,40 @@ export function FilterSheet({ open, onClose }: FilterSheetProps) {
     );
   }, []);
 
+  const handleSpeciesChange = useCallback(
+    (name: string, id: number | null) => {
+      setLocalSpeciesName(name);
+      setLocalSpeciesId(id);
+    },
+    [],
+  );
+
+  const clearSpecies = useCallback(() => {
+    setLocalSpeciesName("");
+    setLocalSpeciesId(null);
+  }, []);
+
   const handleApply = useCallback(() => {
     setFilters({
       sizes: selectedSizes.length > 0 ? selectedSizes : undefined,
       radiusKm: radius < DEFAULT_RADIUS ? radius : undefined,
+      speciesId: localSpeciesId ?? undefined,
+      speciesName: localSpeciesId ? localSpeciesName : undefined,
     });
     onClose();
-  }, [selectedSizes, radius, setFilters, onClose]);
+  }, [selectedSizes, radius, localSpeciesId, localSpeciesName, setFilters, onClose]);
 
   const handleReset = useCallback(() => {
     resetFilters();
     setSelectedSizes([]);
     setRadius(DEFAULT_RADIUS);
+    setLocalSpeciesName("");
+    setLocalSpeciesId(null);
     onClose();
   }, [resetFilters, onClose]);
 
   const hasChanges =
-    selectedSizes.length > 0 || radius < DEFAULT_RADIUS;
+    selectedSizes.length > 0 || radius < DEFAULT_RADIUS || localSpeciesId != null;
 
   return (
     <AnimatePresence>
@@ -144,6 +170,25 @@ export function FilterSheet({ open, onClose }: FilterSheetProps) {
 
             {/* Content */}
             <div className="overflow-y-auto px-5 pb-6 space-y-6">
+              {/* Species filter */}
+              <div>
+                <SpeciesAutocomplete
+                  value={localSpeciesName}
+                  speciesId={localSpeciesId}
+                  onChange={handleSpeciesChange}
+                />
+                {localSpeciesId != null && localSpeciesName && (
+                  <div className="mt-2">
+                    <Chip
+                      label={localSpeciesName}
+                      selected
+                      onToggle={clearSpecies}
+                      onRemove={clearSpecies}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Size filter */}
               <div>
                 <p className="text-sm font-semibold text-neutral-900 mb-3">

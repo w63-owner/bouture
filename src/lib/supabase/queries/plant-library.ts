@@ -121,3 +121,43 @@ export async function getUserOwnedSpeciesIds(
     (data ?? []).map((row) => row.species_id).filter((id): id is number => id !== null),
   );
 }
+
+export async function getUserCollectionPlants(
+  userId: string,
+): Promise<PlantLibraryItem[]> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("plant_library")
+    .select("id, species_name, species_id, photos, notes, status, created_at")
+    .eq("user_id", userId)
+    .eq("status", "collection")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Failed to fetch collection plants: ${error.message}`);
+  return data ?? [];
+}
+
+/** Maps species_id → first plant_library.id for quick navigation */
+export async function getUserPlantsBySpecies(
+  userId: string,
+): Promise<Map<number, string>> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("plant_library")
+    .select("id, species_id")
+    .eq("user_id", userId)
+    .not("species_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Failed to fetch plant map: ${error.message}`);
+
+  const map = new Map<number, string>();
+  for (const row of data ?? []) {
+    if (row.species_id !== null && !map.has(row.species_id)) {
+      map.set(row.species_id, row.id);
+    }
+  }
+  return map;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useTransition } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +13,7 @@ import {
   MapPin,
   Clock,
   Calendar,
+  Repeat2,
 } from "lucide-react";
 import { PhotoCarousel } from "@/components/ui/carousel";
 import { SizeBadge } from "@/components/ui/badge";
@@ -21,13 +23,16 @@ import { toast } from "@/components/ui/toast";
 import { timeAgo } from "@/lib/utils/time-ago";
 import { deleteListing } from "@/app/carte/[listingId]/actions";
 import { startConversation } from "@/app/messages/actions";
-import type { ListingSize } from "@/lib/types/listing";
+import { Lightbox } from "@/components/ui/lightbox";
+import { ExchangeProposalModal } from "./exchange-proposal-modal";
+import type { ListingSize, TransactionType } from "@/lib/types/listing";
 
 interface ListingData {
   id: string;
   donor_id: string;
   species_name: string;
   size: ListingSize;
+  transaction_type: TransactionType;
   description: string | null;
   photos: string[];
   address_city: string | null;
@@ -48,7 +53,13 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
   const router = useRouter();
   const isOwner = currentUserId === listing.donor_id;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const txType = listing.transaction_type;
+  const showContact = txType === "don_uniquement" || txType === "les_deux";
+  const showExchange = txType === "echange_uniquement" || txType === "les_deux";
 
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/carte/${listing.id}`;
@@ -122,17 +133,27 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
           photos={listing.photos}
           alt={listing.species_name}
           aspectRatio="4/3"
+          layoutIdPrefix={`listing-photo-${listing.id}`}
+          onPhotoClick={(index) => setLightboxIndex(index)}
         />
       </div>
 
       {/* Content */}
       <div className="px-5 pt-5 pb-32 space-y-6">
-        {/* Title + badge */}
+        {/* Title + badges */}
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-2xl font-heading font-semibold text-neutral-900 leading-tight">
             {listing.species_name}
           </h1>
-          <SizeBadge size={listing.size} className="shrink-0 mt-1" />
+          <div className="flex shrink-0 items-center gap-1.5 mt-1">
+            {showExchange && (
+              <span className="inline-flex items-center gap-1 rounded-pill bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
+                <Repeat2 className="h-3 w-3" />
+                {txType === "echange_uniquement" ? "Échange" : "Don & Échange"}
+              </span>
+            )}
+            <SizeBadge size={listing.size} />
+          </div>
         </div>
 
         {/* Meta info */}
@@ -222,14 +243,26 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
             >
               <Share2 className="h-5 w-5" />
             </Button>
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={handleContact}
-            >
-              <MessageCircle className="h-5 w-5" />
-              Contacter le donneur
-            </Button>
+            {showContact && (
+              <Button
+                variant={showExchange ? "outline" : "primary"}
+                className="flex-1"
+                onClick={handleContact}
+              >
+                <MessageCircle className="h-5 w-5" />
+                Contacter
+              </Button>
+            )}
+            {showExchange && currentUserId && (
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => setShowExchangeModal(true)}
+              >
+                <Repeat2 className="h-5 w-5" />
+                Proposer un échange
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -246,6 +279,35 @@ export function ListingDetail({ listing, currentUserId }: ListingDetailProps) {
         loading={isPending}
         onConfirm={handleDelete}
       />
+
+      {/* Exchange proposal modal */}
+      {currentUserId && showExchange && (
+        <ExchangeProposalModal
+          open={showExchangeModal}
+          onClose={() => setShowExchangeModal(false)}
+          targetListing={{
+            id: listing.id,
+            species_name: listing.species_name,
+            size: listing.size,
+            photos: listing.photos,
+            donor_id: listing.donor_id,
+          }}
+          currentUserId={currentUserId}
+        />
+      )}
+
+      {/* Fullscreen lightbox */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <Lightbox
+            key="lightbox"
+            images={listing.photos}
+            initialIndex={lightboxIndex}
+            baseLayoutId={`listing-photo-${listing.id}`}
+            onClose={() => setLightboxIndex(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

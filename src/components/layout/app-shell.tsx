@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { BottomNav } from "./bottom-nav";
 
-const HIDE_NAV_PREFIXES = ["/auth", "/carte/", "/messages/", "/profil/"];
+const HIDE_NAV_PREFIXES = ["/auth", "/carte/", "/collection/", "/messages/", "/profil/"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

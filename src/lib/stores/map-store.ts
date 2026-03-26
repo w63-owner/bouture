@@ -85,6 +85,7 @@ export const useMapStore = create<MapState>((set, get) => ({
     let count = 0;
     if (f.sizes && f.sizes.length > 0) count += f.sizes.length;
     if (f.radiusKm && f.radiusKm !== 50) count += 1;
+    if (f.speciesId != null) count += 1;
     return count;
   },
 }));
