@@ -9,11 +9,13 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { listingFormSchema, type ListingFormData } from "@/lib/schemas/listing";
 import { createClient } from "@/lib/supabase/client";
+import { uploadPlantPhotos } from "@/lib/supabase/storage";
 import { createListing, updateListing } from "@/lib/supabase/mutations/listings";
 import { getListingForEdit } from "@/lib/supabase/queries/listings";
 import {
   getUserCollectionPlants,
   updatePlant,
+  addPlant,
   type PlantLibraryItem,
 } from "@/lib/supabase/queries/plant-library";
 import { toast } from "@/components/ui/toast";
@@ -100,7 +102,7 @@ export default function DonnerPage() {
       species_name: "",
       species_id: null,
       size: undefined,
-      transaction_type: "don_uniquement",
+      transaction_type: "les_deux",
       photos: [],
       description: "",
       address_city: "",
@@ -151,7 +153,7 @@ export default function DonnerPage() {
           species_name: listing.species_name,
           species_id: listing.species_id ?? null,
           size: listing.size as ListingFormData["size"],
-          transaction_type: (listing.transaction_type as ListingFormData["transaction_type"]) ?? "don_uniquement",
+          transaction_type: (listing.transaction_type as ListingFormData["transaction_type"]) ?? "les_deux",
           photos: [],
           description: listing.description ?? "",
           address_city: listing.address_city ?? "",
@@ -187,8 +189,16 @@ export default function DonnerPage() {
     (name: string, id: number | null) => {
       setValue("species_name", name, { shouldValidate: true });
       setValue("species_id", id);
+
+      if (selectedPlantId) {
+        const selected = collectionPlants.find((p) => p.id === selectedPlantId);
+        if (selected && selected.species_name !== name) {
+          setSelectedPlantId(null);
+          setPlantPhotoUrls([]);
+        }
+      }
     },
-    [setValue],
+    [setValue, selectedPlantId, collectionPlants],
   );
 
   const handleAddressChange = useCallback(
@@ -219,17 +229,39 @@ export default function DonnerPage() {
         toast.success("Annonce mise à jour !");
         router.push("/profil/annonces");
       } else {
+        let plantLibraryId = selectedPlantId;
+
+        if (!plantLibraryId) {
+          const photos = plantPhotoUrls.length > 0
+            ? plantPhotoUrls
+            : pendingData.photos.length > 0
+              ? await uploadPlantPhotos(userId, pendingData.photos)
+              : [];
+
+          if (photos.length > 0) {
+            plantLibraryId = await addPlant(userId, {
+              species_name: pendingData.species_name,
+              species_id: pendingData.species_id,
+              photos,
+              notes: "",
+            });
+          }
+        }
+
         const result = await createListing(userId, pendingData, {
           existingPhotoUrls: plantPhotoUrls,
-          plantLibraryId: selectedPlantId ?? undefined,
+          plantLibraryId: plantLibraryId ?? undefined,
         });
 
-        if (selectedPlantId) {
-          await updatePlant(selectedPlantId, { status: "for_donation" }).catch(
+        if (plantLibraryId) {
+          await updatePlant(plantLibraryId, { status: "for_donation" }).catch(
             () => {},
           );
         }
 
+        if (!selectedPlantId && plantLibraryId) {
+          toast.success("Plante ajoutée à votre Collection !");
+        }
         toast.success("Votre bouture est en ligne !");
         router.push(`/carte?highlight=${result.id}`);
       }

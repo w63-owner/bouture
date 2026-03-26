@@ -4,9 +4,8 @@ import { Chip } from "@/components/ui/chip";
 import type { TransactionType } from "@/lib/types/listing";
 
 const OPTIONS: { value: TransactionType; label: string }[] = [
-  { value: "don_uniquement", label: "Donner uniquement" },
+  { value: "les_deux", label: "Don ou échange" },
   { value: "echange_uniquement", label: "Échanger uniquement" },
-  { value: "les_deux", label: "Don et Échange" },
 ];
 
 interface TransactionTypeSelectorProps {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   motion,
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { timeAgo } from "@/lib/utils/time-ago";
 import { startConversation } from "@/app/messages/actions";
+import { Lightbox } from "@/components/ui/lightbox";
 
 const DISMISS_THRESHOLD = 100;
 
@@ -36,6 +37,11 @@ export function ListingBottomSheet() {
   const selectedListing = useMapStore((s) => s.selectedListing);
   const clearSelection = useMapStore((s) => s.clearSelection);
   const [isPending, startTransition] = useTransition();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLightboxIndex(null);
+  }, [selectedListing?.id]);
 
   const y = useMotionValue(0);
   const opacity = useTransform(y, [0, 300], [1, 0]);
@@ -117,6 +123,8 @@ export function ListingBottomSheet() {
               photos={selectedListing.photos}
               alt={selectedListing.species_name}
               className="rounded-none"
+              layoutIdPrefix={`listing-photo-${selectedListing.id}`}
+              onPhotoClick={(index) => setLightboxIndex(index)}
             />
 
             {/* Content */}
@@ -190,6 +198,18 @@ export function ListingBottomSheet() {
               </Button>
             </div>
           </motion.div>
+
+          <AnimatePresence>
+            {lightboxIndex !== null && (
+              <Lightbox
+                key="lightbox-sheet"
+                images={selectedListing.photos}
+                initialIndex={lightboxIndex}
+                baseLayoutId={`listing-photo-${selectedListing.id}`}
+                onClose={() => setLightboxIndex(null)}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
